@@ -5,7 +5,7 @@ def main():
     
     sys.stdout.write("$ ")
     command = input()
-    print(f'{command}:Command not found')
+    print(f'{command}: command not found')
     pass
 
 
