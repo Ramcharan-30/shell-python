@@ -1,20 +1,32 @@
 import sys
+import shutil
+
+def echo(args):
+    print(args)
+
+def type(args):
+    builtin_commands = ["echo", "exit","type"]
+    if args in builtin_commands:
+            print(f'{args} is a shell builtin')
+    elif path := shutil.which(args):
+        print(f"{args} is {path}")
+    else:
+            print(f'{args} not found')
+
+    
 
 
 def main():
-   builtin_commands = ["echo", "exit","type"]
+   
    while(1): 
     sys.stdout.write("$ ")
     command = input()
     if command == "exit":
         sys.exit(0)
     elif command[0:4] == "echo":
-        print(f'{command[5:]}')
+        echo(command[5:])
     elif command[0:4] == "type":
-        if command[5:] in builtin_commands:
-            print(f'{command[5:]} is a shell builtin')
-        else:
-            print(f'{command[5:]} not found')
+        type(command[5:])
        
     else:
         print(f'{command}: command not found')
