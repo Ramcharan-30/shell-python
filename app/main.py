@@ -34,7 +34,7 @@ def main():
     if command == "exit":
         sys.exit(0)
     elif commands[0] == "echo":
-        echo(commands[1])
+        echo(command[5:])
     elif commands[0] == "type":
         type(commands[1])
     elif path := shutil.which(commands[0]):
