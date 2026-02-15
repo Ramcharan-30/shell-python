@@ -1,6 +1,7 @@
 import sys
 import shutil
 import subprocess
+import re
 
 
 
@@ -25,15 +26,15 @@ def main():
    while(1): 
     sys.stdout.write("$ ")
     command = input()
-    fcommand = command.split(None, 1)[0]
+    commands = re.split(r'\s+', command)
     if command == "exit":
         sys.exit(0)
     elif command[0:4] == "echo":
         echo(command[5:])
     elif command[0:4] == "type":
         type(command[5:])
-    elif path := shutil.which(fcommand):
-        subprocess.run([command.split()], shell=True)
+    elif path := shutil.which(commands[0]):
+        subprocess.run(commands, shell=True)
        
     else:
         print(f'{command}: command not found')
