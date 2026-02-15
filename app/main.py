@@ -22,9 +22,12 @@ def printdirectory():
     print(os.getcwd())
 
 def change_directory(path):
-    try:
+    if path == "~":
+        path = os.path.expanduser("~")
+    else:
+       try:
         os.chdir(path)
-    except FileNotFoundError:
+       except FileNotFoundError:
         print(f"cd: {path}: No such file or directory")
 
     
