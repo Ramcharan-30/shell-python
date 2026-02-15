@@ -2,6 +2,7 @@ import sys
 import shutil
 import subprocess
 import re
+import os
 
 
 
@@ -17,6 +18,9 @@ def type(args):
     else:
             print(f'{args} not found')
 
+def printdirectory():
+    print(os.getcwd())
+
 
     
 
@@ -29,13 +33,14 @@ def main():
     commands = re.split(r'\s+', command)
     if command == "exit":
         sys.exit(0)
-    elif command[0:4] == "echo":
-        echo(command[5:])
-    elif command[0:4] == "type":
-        type(command[5:])
+    elif commands[0] == "echo":
+        echo(commands[1])
+    elif commands[0] == "type":
+        type(commands[1])
     elif path := shutil.which(commands[0]):
         subprocess.run(command.split())
-       
+    elif commands[0] == "pwd":
+        printdirectory()
     else:
         print(f'{command}: command not found')
     pass
