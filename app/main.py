@@ -24,6 +24,7 @@ def printdirectory():
 def change_directory(path):
     if path == "~":
         path = os.path.expanduser("~")
+        os.chdir(path)
     else:
        try:
         os.chdir(path)
