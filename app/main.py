@@ -34,7 +34,7 @@ def main():
     elif command[0:4] == "type":
         type(command[5:])
     elif path := shutil.which(commands[0]):
-        subprocess.run(commands, shell=True)
+        subprocess.run(command.split())
        
     else:
         print(f'{command}: command not found')
