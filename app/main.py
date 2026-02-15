@@ -16,8 +16,6 @@ def type(args):
     else:
             print(f'{args} not found')
 
-def exec(args):
-    if
 
     
 
