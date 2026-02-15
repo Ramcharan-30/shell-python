@@ -10,7 +10,7 @@ def echo(args):
     print(args)
 
 def type(args):
-    builtin_commands = ["echo", "exit","type"]
+    builtin_commands = ["echo", "exit","type","pwd"]
     if args in builtin_commands:
             print(f'{args} is a shell builtin')
     elif path := shutil.which(args):
