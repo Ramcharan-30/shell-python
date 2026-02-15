@@ -10,7 +10,7 @@ def echo(args):
     print(args)
 
 def type(args):
-    builtin_commands = ["echo", "exit","type","pwd"]
+    builtin_commands = ["echo", "exit","type","pwd","cd"]
     if args in builtin_commands:
             print(f'{args} is a shell builtin')
     elif path := shutil.which(args):
@@ -21,6 +21,11 @@ def type(args):
 def printdirectory():
     print(os.getcwd())
 
+def change_directory(path):
+    try:
+        os.chdir(path)
+    except FileNotFoundError:
+        print(f"cd: {path}: No such file or directory")
 
     
 
@@ -41,6 +46,8 @@ def main():
         subprocess.run(command.split())
     elif commands[0] == "pwd":
         printdirectory()
+    elif commands[0] == "cd":
+        change_directory(commands[1])
     else:
         print(f'{command}: command not found')
     pass
