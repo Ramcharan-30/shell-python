@@ -7,7 +7,21 @@ import os
 
 
 def echo(args):
-    print(args)
+    arguments = re.split(r'\s+', args)
+    if arguments[0] == "'" and arguments[-1] == "'":
+        for i in range(1, len(arguments)-1):
+            if arguments[i] =="'":
+                continue
+            else:
+             print(arguments[i])
+    
+    else:
+        for i in arguments:
+            if arguments[i]==" " and arguments[i-1]==" ":
+                continue
+            elif arguments[i]=="'":
+                continue
+            else:                print(arguments[i])
 
 def type(args):
     builtin_commands = ["echo", "exit","type","pwd","cd"]
