@@ -13,7 +13,8 @@ def echo(args):
             
     
     else:
-        result = re.sub(r'\s+', ' ', args).strip()
+        args = args.replace("'", "")
+        result = re.split(r'\s+', args)
         
         print(result[:])
 
