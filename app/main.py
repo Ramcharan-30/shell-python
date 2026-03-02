@@ -7,21 +7,21 @@ import os
 
 
 def echo(args):
-    arguments = re.split(r'\s+', args)
-    if arguments[0] == "'" and arguments[-1] == "'":
-        for i in range(1, len(arguments)-1):
-            if arguments[i] =="'":
+    
+    if args[0] == "'" and args[-1] == "'":
+        for i in range(1, len(args)-1):
+            if args[i] =="'":
                 continue
             else:
-             print(arguments[i])
+             print(args[i])
     
     else:
-        for i in range(1, len(arguments)):
-            if arguments[i]==" " and arguments[i-1]==" ":
+        for i in range(1, len(args)):
+            if args[i]==" " and args[i-1]==" ":
                 continue
-            elif arguments[i]=="'":
+            elif args[i]=="'":
                 continue
-            else:                print(arguments[i])
+            else:                print(args[i])
 
 def type(args):
     builtin_commands = ["echo", "exit","type","pwd","cd"]
@@ -57,7 +57,7 @@ def main():
     if command == "exit":
         sys.exit(0)
     elif commands[0] == "echo":
-        echo(command[6:])
+        echo(command[5:])
     elif commands[0] == "type":
         type(commands[1])
     elif path := shutil.which(commands[0]):
