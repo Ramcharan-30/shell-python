@@ -9,19 +9,13 @@ import os
 def echo(args):
     
     if args[0] == "'" and args[-1] == "'":
-        for i in range(1, len(args)-1):
-            if args[i] =="'":
-                args[i].replace("'","")
-        print(args[1:-1])   
+        print(args[1:-1].replace("'",""))   
             
     
     else:
-        for i in range(1, len(args)):
-            if args[i]==" " and args[i-1]==" ":
-                args[i].replace(" ","")
-            elif args[i]=="'":
-                args[i].replace("'","")
-        print(args)
+        args=args.replace(" ", "")
+        result=" ".join(args.split())
+        print(result)
 
 def type(args):
     builtin_commands = ["echo", "exit","type","pwd","cd"]
