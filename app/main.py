@@ -11,16 +11,16 @@ def echo(args):
     if args[0] == "'" and args[-1] == "'":
         for i in range(1, len(args)-1):
             if args[i] =="'":
-                args[i]=args[i].replace("'","")
+                args[i].replace("'","")
         print(args[1:-1])   
             
     
     else:
         for i in range(1, len(args)):
             if args[i]==" " and args[i-1]==" ":
-                args[i]=args[i].replace(" ","")
+                args[i].replace(" ","")
             elif args[i]=="'":
-                args[i]=args[i].replace("'","")
+                args[i].replace("'","")
         print(args)
 
 def type(args):
