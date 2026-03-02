@@ -16,7 +16,7 @@ def echo(args):
              print(arguments[i])
     
     else:
-        for i in arguments:
+        for i in range(1, len(arguments)):
             if arguments[i]==" " and arguments[i-1]==" ":
                 continue
             elif arguments[i]=="'":
