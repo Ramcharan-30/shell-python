@@ -11,17 +11,17 @@ def echo(args):
     if args[0] == "'" and args[-1] == "'":
         for i in range(1, len(args)-1):
             if args[i] =="'":
-                continue
-            else:
-             print(args[i])
+                args[i]=args[i+1]
+        print(args[1:-1])   
+            
     
     else:
         for i in range(1, len(args)):
             if args[i]==" " and args[i-1]==" ":
-                continue
+                args[i]=args[i+1]
             elif args[i]=="'":
-                continue
-            else:                print(args[i])
+                args[i]=args[i].replace("'","")
+        print(args)
 
 def type(args):
     builtin_commands = ["echo", "exit","type","pwd","cd"]
