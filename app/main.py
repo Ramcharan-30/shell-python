@@ -16,7 +16,7 @@ def echo(args):
         args = args.replace("'", "")
         result = re.split(r'\s+', args)
         
-        print(result[:])
+        print(" ".join(result))
 
 def type(args):
     builtin_commands = ["echo", "exit","type","pwd","cd"]
