@@ -7,16 +7,28 @@ import os
 
 
 def echo(args):
+    result = []
+    word = []
+    in_quote = False
+    parsing_word = False
     
-    if args[0] == "'" and args[-1] == "'":
-        print(args[1:-1].replace("'",""))   
+    for char in args:
+        if char == "'":
+            in_quote = not in_quote
+            parsing_word = True
+        elif char == ' ' and not in_quote:
+            if parsing_word:
+                result.append("".join(word))
+                word = []
+                parsing_word = False
+        else:
+            word.append(char)
+            parsing_word = True
             
-    
-    else:
-        args = args.replace("'", "")
-        result = re.split(r'\s+', args)
+    if parsing_word:
+        result.append("".join(word))
         
-        print(" ".join(result))
+    print(" ".join(result))
 
 def type(args):
     builtin_commands = ["echo", "exit","type","pwd","cd"]
