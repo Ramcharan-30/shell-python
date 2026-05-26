@@ -1,59 +1,60 @@
 import sys
 import shutil
 import subprocess
-import re
 import os
 
 def parse_args(command_string):
     args = []
     current_token = []
-    in_quote = False
-    has_token = False 
-    
+    quote_char = None
+
     for char in command_string:
-        if char == "'" and not in_quote:
-            in_quote = True
-            has_token = True 
-        elif char == "'" and in_quote:
-            in_quote = False
-        elif char == ' ' and not in_quote:
-            if has_token:
+        if char in ('"', "'"):
+            if quote_char is None:
+                quote_char = char
+            elif quote_char == char:
+                quote_char = None
+            else:
+                current_token.append(char)
+        elif char == " " and quote_char is None:
+            if current_token:
                 args.append("".join(current_token))
                 current_token = []
-                has_token = False
         else:
             current_token.append(char)
-            has_token = True 
-            
-    if has_token:
+
+    if current_token:
         args.append("".join(current_token))
-        
+
     return args
 
 def echo(args):
     print(" ".join(args))
 
 def type_command(args):
+    if not args:
+        print("type: usage: type name")
+        return
+
     builtin_commands = ["echo", "exit", "type", "pwd", "cd"]
     if args in builtin_commands:
-        print(f'{args} is a shell builtin')
+        print(f"{args} is a shell builtin")
     elif path := shutil.which(args):
         print(f"{args} is {path}")
     else:
-        print(f'{args} not found')
+        print(f"{args} not found")
 
 def printdirectory():
     print(os.getcwd())
 
-def change_directory(path):
-    if path == "~":
+def change_directory(path=None):
+    if not path or path == "~":
         path = os.path.expanduser("~")
+
+    try:
         os.chdir(path)
-    else:
-        try:
-            os.chdir(path)
-        except FileNotFoundError:
-            print(f"cd: {path}: No such file or directory")
+    except FileNotFoundError:
+        print(f"cd: {path}: No such file or directory")
 
 def main():
     while(1): 
@@ -72,11 +73,11 @@ def main():
         elif commands[0] == "echo":
             echo(commands[1:])
         elif commands[0] == "type":
-            type_command(commands[1])
+            type_command(commands[1] if len(commands) > 1 else "")
         elif commands[0] == "pwd":
             printdirectory()
         elif commands[0] == "cd":
-            change_directory(commands[1])
+            change_directory(commands[1] if len(commands) > 1 else None)
         elif path := shutil.which(commands[0]):
             
             subprocess.run(commands) 
