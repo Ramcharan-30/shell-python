@@ -5,11 +5,11 @@ import os
 import readline  # 1. NEW: Import the readline module
 
 # 2. NEW: Setup our custom autocompletion
-def setup_autocompletion(path):
+def setup_autocompletion():
     # The commands we want to autocomplete
     builtin_commands = ["echo", "exit", "type", "pwd", "cd"]
 
-    def completer(text, state):
+    def completer(text, state,path=os.getcwd()):
         # Find all built-ins that start with the text the user typed
         options = [cmd for cmd in builtin_commands if cmd.startswith(text)]
         # Find all files and directories in the current path that start with the text the user typed
@@ -99,7 +99,7 @@ def change_directory(path=None):
 
 def main():
     # 3. NEW: Activate the autocompletion before the infinite loop starts
-    setup_autocompletion(os.getcwd())
+    setup_autocompletion()
 
     while(1): 
         # UPDATED: Use input("$ ") instead of sys.stdout.write. 
