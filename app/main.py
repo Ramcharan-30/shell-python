@@ -2,14 +2,7 @@ import sys
 import shutil
 import subprocess
 import os
-def handle_redirection(command_string, args,filename):
-    output_file = open(filename, "w")
-    try:
-        subprocess.run(args, stdout=output_file)   
-    except FileNotFoundError:
-        print(f'{args[0]}: command not found')
-    finally:
-        output_file.close()
+
 
 def parse_args(command_string):
     args = []
@@ -86,32 +79,53 @@ def main():
         sys.stdout.flush()
         command = input()
         
-        
         commands = parse_args(command)
-        if ("1>",">") in commands:
-            idx = commands.index("1>") if "1>" in commands else commands.index(">")
-            commands.pop(idx)
-            filename = commands[idx]
-            handle_redirection(command, commands, filename)
-        else:
-         if not commands:
+        
+        if not commands:
             continue
-
-         if commands[0] == "exit":
-            sys.exit(0)
-         elif commands[0] == "echo":
-            echo(commands[1:])
-         elif commands[0] == "type":
-            type_command(commands[1] if len(commands) > 1 else "")
-         elif commands[0] == "pwd":
-            printdirectory()
-         elif commands[0] == "cd":
-            change_directory(commands[1] if len(commands) > 1 else None)
-         elif path := shutil.which(commands[0]):
+        redirect_file = None
+        if ">" in commands or "1>" in commands:
+            op = "1>" if "1>" in commands else ">"
+            idx = commands.index(op)
             
-            subprocess.run(commands) 
-         else:
-            print(f'{commands[0]}: command not found')
+            commands.pop(idx)                 
+            redirect_file = commands.pop(idx) 
+        original_stdout = sys.stdout
+        output_file_handle = None
+
+        if redirect_file:
+            output_file_handle = open(redirect_file, "w")
+            sys.stdout = output_file_handle 
+
+        
+        try:
+            if commands[0] == "exit":
+                sys.exit(0)
+            elif commands[0] == "echo":
+                echo(commands[1:])
+            elif commands[0] == "type":
+                type_command(commands[1] if len(commands) > 1 else "")
+            elif commands[0] == "pwd":
+                printdirectory()
+            elif commands[0] == "cd":
+                change_directory(commands[1] if len(commands) > 1 else None)
+            elif path := shutil.which(commands[0]):
+                if output_file_handle:
+                    subprocess.run(commands, stdout=output_file_handle) 
+                else:
+                    subprocess.run(commands)
+            else:
+                
+                if output_file_handle:
+                    sys.stdout = original_stdout
+                print(f'{commands[0]}: command not found')
+                if output_file_handle:
+                    sys.stdout = output_file_handle
+                    
+        finally:
+            if output_file_handle:
+                sys.stdout = original_stdout
+                output_file_handle.close()
 
 if __name__ == "__main__":
     main()
