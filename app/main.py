@@ -2,6 +2,27 @@ import sys
 import shutil
 import subprocess
 import os
+import readline  # 1. NEW: Import the readline module
+
+# 2. NEW: Setup our custom autocompletion
+def setup_autocompletion():
+    # The commands we want to autocomplete
+    builtin_commands = ["echo", "exit", "type", "pwd", "cd"]
+
+    def completer(text, state):
+        # Find all built-ins that start with the text the user typed
+        options = [cmd for cmd in builtin_commands if cmd.startswith(text)]
+        
+        # Readline calls this function multiple times, increasing 'state' from 0 upwards.
+        # It stops when we return None.
+        if state < len(options):
+            return options[state] + " "  # Add the trailing space!
+        else:
+            return None
+
+    # Tell readline to use our function, and bind it to the Tab key
+    readline.set_completer(completer)
+    readline.parse_and_bind("tab: complete")
 
 
 def parse_args(command_string):
@@ -23,6 +44,7 @@ def parse_args(command_string):
 
         elif char == "\\" and quote_char == '"':
             escaped = True
+            
         elif char in ('"', "'"):
             if quote_char is None:
                 quote_char = char
@@ -39,7 +61,6 @@ def parse_args(command_string):
         else:
             current_token.append(char)
     
-
     if current_token:
         args.append("".join(current_token))
 
@@ -74,27 +95,40 @@ def change_directory(path=None):
         print(f"cd: {path}: No such file or directory", file=sys.stderr)
 
 def main():
+    # 3. NEW: Activate the autocompletion before the infinite loop starts
+    setup_autocompletion()
+
     while(1): 
-        sys.stdout.write("$ ")
-        sys.stdout.flush()
-        command = input()
+        # UPDATED: Use input("$ ") instead of sys.stdout.write. 
+        # This allows readline to redraw the line correctly without deleting the prompt.
+        try:
+            command = input("$ ")
+        except EOFError:
+            break # Exits cleanly if the tester sends an EOF signal
         
         commands = parse_args(command)
         
         if not commands:
             continue
 
-       
         redirect_file = None
         redirect_stream = None 
         operation = None
         
+        # REDIRECTION LOGIC
         if "2>" in commands:
             idx = commands.index("2>")
             redirect_stream = "stderr"
             commands.pop(idx)
             redirect_file = commands.pop(idx)
             operation = "w"
+            
+        elif "2>>" in commands:
+            idx = commands.index("2>>")
+            redirect_stream = "stderr"
+            commands.pop(idx)
+            redirect_file = commands.pop(idx)
+            operation = "a"
             
         elif ">" in commands or "1>" in commands:
             op = "1>" if "1>" in commands else ">"
@@ -103,6 +137,7 @@ def main():
             commands.pop(idx)
             redirect_file = commands.pop(idx)
             operation = "w"
+            
         elif ">>" in commands or "1>>" in commands:
             op = "1>>" if "1>>" in commands else ">>"
             idx = commands.index(op)
@@ -110,12 +145,7 @@ def main():
             commands.pop(idx)
             redirect_file = commands.pop(idx)
             operation = "a"
-        elif "2>>" in commands:
-            idx = commands.index("2>>")
-            redirect_stream = "stderr"
-            commands.pop(idx)
-            redirect_file = commands.pop(idx)
-            operation = "a"
+        
         original_stdout = sys.stdout
         original_stderr = sys.stderr
         output_file_handle = None
@@ -127,7 +157,6 @@ def main():
             elif redirect_stream == "stderr":
                 sys.stderr = output_file_handle
 
-        
         try:
             if commands[0] == "exit":
                 sys.exit(0)
@@ -149,10 +178,8 @@ def main():
             else:
                 print(f'{commands[0]}: command not found', file=sys.stderr)
                     
-        # 4. CLEANUP
         finally:
             if output_file_handle:
-                # Always restore both to guarantee a clean state
                 sys.stdout = original_stdout
                 sys.stderr = original_stderr
                 output_file_handle.close()
