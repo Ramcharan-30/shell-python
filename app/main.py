@@ -3,6 +3,7 @@ import shutil
 import subprocess
 import os
 
+
 def parse_args(command_string):
     args = []
     current_token = []
@@ -16,7 +17,8 @@ def parse_args(command_string):
         elif char == "\\" and quote_char is None:
             escaped = True
         elif char == "\\" and quote_char is not None:
-            escaped = True
+            escaped = False
+            current_token.append(char)
         elif char in ('"', "'"):
             if quote_char is None:
                 quote_char = char
