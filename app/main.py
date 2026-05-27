@@ -100,7 +100,13 @@ def main():
             redirect_stream = "stdout"
             commands.pop(idx)
             redirect_file = commands.pop(idx)
-
+        elif ">>" in commands or "1>>" in commands:
+            op = "1>>" if "1>>" in commands else ">>"
+            idx = commands.index(op)
+            redirect_stream = "stdout"
+            commands.pop(idx)
+            redirect_file = commands.pop(idx)
+            redirect_file = (redirect_file, "a")
         
         original_stdout = sys.stdout
         original_stderr = sys.stderr
