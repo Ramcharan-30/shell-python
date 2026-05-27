@@ -6,24 +6,55 @@ import readline  # 1. NEW: Import the readline module
 
 # 2. NEW: Setup our custom autocompletion
 def setup_autocompletion():
-    # Restrict to what the test explicitly asks for to guarantee a pass
     builtin_commands = ["echo", "exit", "type", "pwd", "cd"]
+    
+    # We create a list here to cache our search results
+    completion_matches = []
 
     def completer(text, state):
-        # Find all built-ins that start with the text the user typed
-        options = [cmd for cmd in builtin_commands if cmd.startswith(text)]
+        # Allow the inner function to modify the cache variable
+        nonlocal completion_matches 
+        
+        # state == 0 means the user JUST pressed Tab. 
+        # Time to scan the computer!
+        if state == 0:
+            matches = set() # Use a set to automatically remove duplicates
+            
+            # 1. Add matching built-in commands
+            for cmd in builtin_commands:
+                if cmd.startswith(text):
+                    matches.add(cmd)
+            
+            # 2. Add matching external executables from PATH
+            path_env = os.environ.get("PATH", "")
+            if path_env:
+                for directory in path_env.split(os.pathsep):
+                    # Make sure the directory actually exists
+                    if os.path.isdir(directory):
+                        try:
+                            for filename in os.listdir(directory):
+                                if filename.startswith(text):
+                                    filepath = os.path.join(directory, filename)
+                                    # Ensure it is a file AND it is executable
+                                    if os.path.isfile(filepath) and os.access(filepath, os.X_OK):
+                                        matches.add(filename)
+                        except PermissionError:
+                            # Ignore folders the OS won't let us read
+                            pass
+            
+            # Sort the results alphabetically and save them to the cache
+            completion_matches = sorted(list(matches))
 
-        if state < len(options):
-            return options[state] + " "  # Add the trailing space!
+        # Finally, return the requested match from our cache (plus a space)
+        if state < len(completion_matches):
+            return completion_matches[state] + " "
         else:
             return None
 
-    # Tell readline to use our function, and bind it to the Tab key
+    # Bind the tab key
     if 'libedit' in readline.__doc__:
-        # Optional: Makes it work on macOS natively if you test locally
         readline.parse_and_bind("bind ^I rl_complete")
     else:
-        # Standard GNU readline (Linux / CodeCrafters Environment)
         readline.parse_and_bind("tab: complete")
 
 def parse_args(command_string):
