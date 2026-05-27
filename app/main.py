@@ -12,13 +12,17 @@ def parse_args(command_string):
 
     for char in command_string:
         if escaped:
+            if quote_char == '"' and char not in ('"', '\\', '$', '\n'):
+                current_token.append('\\') 
+            
             current_token.append(char)
             escaped = False
+
         elif char == "\\" and quote_char is None:
             escaped = True
-        elif char == "\\" and quote_char is not None:
+
+        elif char == "\\" and quote_char == '"':
             escaped = True
-            current_token.append(char)
         elif char in ('"', "'"):
             if quote_char is None:
                 quote_char = char
