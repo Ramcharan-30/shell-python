@@ -2,7 +2,14 @@ import sys
 import shutil
 import subprocess
 import os
-
+def handle_redirection(command_string, args,filename):
+    output_file = open(filename, "w")
+    try:
+        subprocess.run(args, stdout=output_file)   
+    except FileNotFoundError:
+        print(f'{args[0]}: command not found')
+    finally:
+        output_file.close()
 
 def parse_args(command_string):
     args = []
@@ -23,12 +30,6 @@ def parse_args(command_string):
 
         elif char == "\\" and quote_char == '"':
             escaped = True
-
-        elif char == ">" or char == "1>":
-            # Handle redirection operators
-            if current_token:
-                sys.stdout.write("".join(current_token) + " ")
-                current_token = []
         elif char in ('"', "'"):
             if quote_char is None:
                 quote_char = char
@@ -87,24 +88,29 @@ def main():
         
         
         commands = parse_args(command)
-        
-        if not commands:
+        if ("1>",">") in commands:
+            idx = commands.index("1>") if "1>" in commands else commands.index(">")
+            commands.pop(idx)
+            filename = commands[idx]
+            handle_redirection(command, commands, filename)
+        else:
+         if not commands:
             continue
 
-        if commands[0] == "exit":
+         if commands[0] == "exit":
             sys.exit(0)
-        elif commands[0] == "echo":
+         elif commands[0] == "echo":
             echo(commands[1:])
-        elif commands[0] == "type":
+         elif commands[0] == "type":
             type_command(commands[1] if len(commands) > 1 else "")
-        elif commands[0] == "pwd":
+         elif commands[0] == "pwd":
             printdirectory()
-        elif commands[0] == "cd":
+         elif commands[0] == "cd":
             change_directory(commands[1] if len(commands) > 1 else None)
-        elif path := shutil.which(commands[0]):
+         elif path := shutil.which(commands[0]):
             
             subprocess.run(commands) 
-        else:
+         else:
             print(f'{commands[0]}: command not found')
 
 if __name__ == "__main__":
