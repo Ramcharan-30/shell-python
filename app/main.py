@@ -7,18 +7,21 @@ def parse_args(command_string):
     args = []
     current_token = []
     quote_char = None
+    escaped = False
 
     for char in command_string:
-        if char in ('"', "'"):
+        if escaped:
+            current_token.append(char)
+            escaped = False
+        elif char == "\\" and quote_char is None:
+            escaped = True
+        elif char in ('"', "'"):
             if quote_char is None:
                 quote_char = char
             elif quote_char == char:
                 quote_char = None
             else:
                 current_token.append(char)
-
-        elif char == "\\" and quote_char is None:
-            continue
 
         elif char == " " and quote_char is None:
             if current_token:
