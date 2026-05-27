@@ -17,6 +17,9 @@ def parse_args(command_string):
             else:
                 current_token.append(char)
 
+        elif char == "\\" and quote_char is None:
+            continue
+
         elif char == " " and quote_char is None:
             if current_token:
                 args.append("".join(current_token))
@@ -24,8 +27,6 @@ def parse_args(command_string):
 
         else:
             current_token.append(char)
-        
-        elif
     
 
     if current_token:
