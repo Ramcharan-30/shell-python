@@ -110,7 +110,12 @@ def main():
             commands.pop(idx)
             redirect_file = commands.pop(idx)
             operation = "a"
-        
+        elif "2>>" in commands:
+            idx = commands.index("2>>")
+            redirect_stream = "stderr"
+            commands.pop(idx)
+            redirect_file = commands.pop(idx)
+            operation = "a"
         original_stdout = sys.stdout
         original_stderr = sys.stderr
         output_file_handle = None
