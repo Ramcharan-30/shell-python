@@ -16,12 +16,17 @@ def parse_args(command_string):
                 quote_char = None
             else:
                 current_token.append(char)
+
         elif char == " " and quote_char is None:
             if current_token:
                 args.append("".join(current_token))
                 current_token = []
+
         else:
             current_token.append(char)
+        
+        elif
+    
 
     if current_token:
         args.append("".join(current_token))
