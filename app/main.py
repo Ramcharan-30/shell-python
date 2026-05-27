@@ -27,9 +27,8 @@ def parse_args(command_string):
         elif char == ">" or char == "1>":
             # Handle redirection operators
             if current_token:
-                args.append("".join(current_token))
+                sys.stdout.write("".join(current_token) + " ")
                 current_token = []
-            args.append(char)
         elif char in ('"', "'"):
             if quote_char is None:
                 quote_char = char
