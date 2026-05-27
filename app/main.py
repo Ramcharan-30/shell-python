@@ -17,7 +17,7 @@ def parse_args(command_string):
         elif char == "\\" and quote_char is None:
             escaped = True
         elif char == "\\" and quote_char is not None:
-            escaped = False
+            escaped = True
             current_token.append(char)
         elif char in ('"', "'"):
             if quote_char is None:
