@@ -94,6 +94,7 @@ def main():
             redirect_stream = "stderr"
             commands.pop(idx)
             redirect_file = commands.pop(idx)
+            operation = "w"
             
         elif ">" in commands or "1>" in commands:
             op = "1>" if "1>" in commands else ">"
