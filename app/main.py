@@ -84,8 +84,8 @@ def main():
         if not commands:
             continue
         redirect_file = None
-        if ">" in commands or "1>" in commands:
-            op = "1>" if "1>" in commands else ">"
+        if ">" in commands or "1>" in commands or "2>" in commands:
+            op = "1>" if "1>" in commands else "2>" if "2>" in commands else ">"
             idx = commands.index(op)
             
             commands.pop(idx)                 
