@@ -29,16 +29,10 @@ def setup_autocompletion():
                             for filename in os.listdir(directory):
                                 if filename.startswith(text):
                                     filepath = os.path.join(directory, filename)
-                                    
-                                    # Relaxing the strict os.X_OK check. In Docker/CI environments, 
-                                    # file permissions can be masked or fail strict python checks.
-                                    # If it's a file in the PATH, we assume it's a valid command.
-                                    if os.path.isfile(filepath):
+                                    if os.path.isfile(filepath) and os.access(filepath, os.X_OK):
                                         matches.add(filename)
-                                        
                         except Exception:
-                            # Broadened to catch ANY error (OSError, FileNotFoundError) so a single 
-                            # broken PATH folder doesn't crash the entire autocomplete engine.
+                            # Catch any broken symlinks or permission errors silently
                             pass
             
             completion_matches = sorted(list(matches))
@@ -48,6 +42,10 @@ def setup_autocompletion():
         else:
             return None
 
+    # THE CRITICAL MISSING LINE: Tell readline to actually use our function!
+    readline.set_completer(completer)
+
+    # Bind the tab key
     if 'libedit' in readline.__doc__:
         readline.parse_and_bind("bind ^I rl_complete")
     else:
