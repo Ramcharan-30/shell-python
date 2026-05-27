@@ -87,6 +87,7 @@ def main():
        
         redirect_file = None
         redirect_stream = None 
+        operation = None
         
         if "2>" in commands:
             idx = commands.index("2>")
