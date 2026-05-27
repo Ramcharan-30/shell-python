@@ -71,7 +71,7 @@ def change_directory(path=None):
     try:
         os.chdir(path)
     except FileNotFoundError:
-        print(f"cd: {path}: No such file or directory")
+        print(f"cd: {path}: No such file or directory", file=sys.stderr)
 
 def main():
     while(1): 
@@ -83,19 +83,35 @@ def main():
         
         if not commands:
             continue
+
+       
         redirect_file = None
-        if ">" in commands or "1>" in commands or "2>" in commands:
-            op = "1>" if "1>" in commands else "2>" if "2>" in commands else ">"
-            idx = commands.index(op)
+        redirect_stream = None 
+        
+        if "2>" in commands:
+            idx = commands.index("2>")
+            redirect_stream = "stderr"
+            commands.pop(idx)
+            redirect_file = commands.pop(idx)
             
-            commands.pop(idx)                 
-            redirect_file = commands.pop(idx) 
+        elif ">" in commands or "1>" in commands:
+            op = "1>" if "1>" in commands else ">"
+            idx = commands.index(op)
+            redirect_stream = "stdout"
+            commands.pop(idx)
+            redirect_file = commands.pop(idx)
+
+        
         original_stdout = sys.stdout
+        original_stderr = sys.stderr
         output_file_handle = None
 
         if redirect_file:
             output_file_handle = open(redirect_file, "w")
-            sys.stdout = output_file_handle 
+            if redirect_stream == "stdout":
+                sys.stdout = output_file_handle
+            elif redirect_stream == "stderr":
+                sys.stderr = output_file_handle
 
         
         try:
@@ -110,21 +126,21 @@ def main():
             elif commands[0] == "cd":
                 change_directory(commands[1] if len(commands) > 1 else None)
             elif path := shutil.which(commands[0]):
-                if output_file_handle:
+                if redirect_stream == "stdout":
                     subprocess.run(commands, stdout=output_file_handle) 
+                elif redirect_stream == "stderr":
+                    subprocess.run(commands, stderr=output_file_handle)
                 else:
                     subprocess.run(commands)
             else:
-                
-                if output_file_handle:
-                    sys.stdout = original_stdout
-                print(f'{commands[0]}: command not found')
-                if output_file_handle:
-                    sys.stdout = output_file_handle
+                print(f'{commands[0]}: command not found', file=sys.stderr)
                     
+        # 4. CLEANUP
         finally:
             if output_file_handle:
+                # Always restore both to guarantee a clean state
                 sys.stdout = original_stdout
+                sys.stderr = original_stderr
                 output_file_handle.close()
 
 if __name__ == "__main__":
