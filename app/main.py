@@ -143,13 +143,21 @@ def main():
             idx = commands.index("|")
             left_cmd = commands[:idx]
             right_cmd = commands[idx + 1:] 
+            
             try:
-             output = subprocess.run(left_cmd, capture_output=True, text=True)
-             subprocess.run(right_cmd, input=output.stdout, text=True)
-            except FileNotFoundError:
-                print(f'{left_cmd[0]}: command not found', file=sys.stderr)
+                
+                p1 = subprocess.Popen(left_cmd, stdout=subprocess.PIPE)
+                p2 = subprocess.Popen(right_cmd, stdin=p1.stdout)
+                p1.stdout.close()
+                p2.communicate()
+                
+            except FileNotFoundError as e:
+                # Extract the missing command name (either from left or right)
+                missing_cmd = left_cmd[0] if not shutil.which(left_cmd[0]) else right_cmd[0]
+                print(f'{missing_cmd}: command not found', file=sys.stderr)
             except Exception as e:
                 print(str(e), file=sys.stderr)
+                
             continue
             
         elif "2>" in commands:
