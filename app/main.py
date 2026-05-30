@@ -139,7 +139,20 @@ def main():
         operation = None
         
         # REDIRECTION LOGIC
-        if "2>" in commands:
+        if "|" in commands:
+            idx = commands.index("|")
+            left_cmd = commands[:idx]
+            right_cmd = commands[idx + 1:] 
+            try:
+             output = subprocess.run(left_cmd, capture_output=True, text=True)
+             subprocess.run(right_cmd, input=output.stdout, text=True)
+            except FileNotFoundError:
+                print(f'{left_cmd[0]}: command not found', file=sys.stderr)
+            except Exception as e:
+                print(str(e), file=sys.stderr)
+            continue
+            
+        elif "2>" in commands:
             idx = commands.index("2>")
             redirect_stream = "stderr"
             commands.pop(idx)
@@ -168,15 +181,7 @@ def main():
             commands.pop(idx)
             redirect_file = commands.pop(idx)
             operation = "a"
-        elif "|" in commands:
-            op="|"
-            idx = commands.index(op)
-            commands.pop(idx)
-            try:
-                output = subprocess.check_output(commands[:idx], stderr=subprocess.STDOUT)
-                subprocess.run(commands[idx:], input=output)
-            except subprocess.CalledProcessError as e:
-                print(e.output.decode(), file=sys.stderr)
+        
         original_stdout = sys.stdout
         original_stderr = sys.stderr
         output_file_handle = None
