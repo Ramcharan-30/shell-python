@@ -171,7 +171,9 @@ def main():
                             change_directory(right_cmd[1] if len(right_cmd) > 1 else None)
                     else:
                         subprocess.run(right_cmd, input=output.encode())
-            
+                except FileNotFoundError as e:
+                    missing_cmd = left_cmd[0] if not shutil.which(left_cmd[0]) else right_cmd[0]
+                    print(f'{missing_cmd}: command not found', file=sys.stderr)
             try:
                 
                 p1 = subprocess.Popen(left_cmd, stdout=subprocess.PIPE)
