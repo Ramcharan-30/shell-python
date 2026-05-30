@@ -139,55 +139,75 @@ def main():
         operation = None
         
         # REDIRECTION LOGIC
+        # REDIRECTION LOGIC
         if "|" in commands:
             idx = commands.index("|")
             left_cmd = commands[:idx]
             right_cmd = commands[idx + 1:] 
+            
             if left_cmd[0] in builtin_commands or right_cmd[0] in builtin_commands:
                 try:
+                    # 1. EXECUTE LEFT COMMAND (Capture Output)
                     if left_cmd[0] in builtin_commands:
                         if left_cmd[0] == "echo":
                             output = " ".join(left_cmd[1:]) + "\n"
-                        elif left_cmd[0] == "type":
-                            output = type_command(left_cmd[1] if len(left_cmd) > 1 else "")
                         elif left_cmd[0] == "pwd":
                             output = os.getcwd() + "\n"
                         elif left_cmd[0] == "cd":
                             change_directory(left_cmd[1] if len(left_cmd) > 1 else None)
-                            continue
-                        else:
                             output = ""
+                        elif left_cmd[0] == "type":
+                            # Replicate type logic to generate a string instead of printing
+                            arg = left_cmd[1] if len(left_cmd) > 1 else ""
+                            if not arg:
+                                output = "type: usage: type name\n"
+                            elif arg in builtin_commands:
+                                output = f"{arg} is a shell builtin\n"
+                            elif p := shutil.which(arg):
+                                output = f"{arg} is {p}\n"
+                            else:
+                                output = f"{arg} not found\n"
                     else:
-                        output = subprocess.check_output(left_cmd).decode()
+                        # External command on the left
+                        output = subprocess.check_output(left_cmd, text=True)
 
+                    # 2. EXECUTE RIGHT COMMAND
                     if right_cmd[0] in builtin_commands:
+                        # Built-ins ignore stdin in Unix! Just run them normally.
                         if right_cmd[0] == "echo":
-                            print(output, end="")
+                            echo(right_cmd[1:])
                         elif right_cmd[0] == "type":
                             type_command(right_cmd[1] if len(right_cmd) > 1 else "")
                         elif right_cmd[0] == "pwd":
-                            print(os.getcwd())
+                            printdirectory()
                         elif right_cmd[0] == "cd":
                             change_directory(right_cmd[1] if len(right_cmd) > 1 else None)
                     else:
-                        subprocess.run(right_cmd, input=output.encode())
-                except FileNotFoundError as e:
-                    missing_cmd = left_cmd[0] if not shutil.which(left_cmd[0]) else right_cmd[0]
-                    print(f'{missing_cmd}: command not found', file=sys.stderr)
-            else:
-                try:
-                
-                    p1 = subprocess.Popen(left_cmd, stdout=subprocess.PIPE)
-                    p2 = subprocess.Popen(right_cmd, stdin=p1.stdout)
-                    p1.stdout.close()
-                    p2.communicate()
-                
-                 except FileNotFoundError as e:
-                # Extract the missing command name (either from left or right)
+                        
+                        subprocess.run(right_cmd, input=output, text=True)
+                        
+                except FileNotFoundError:
                     missing_cmd = left_cmd[0] if not shutil.which(left_cmd[0]) else right_cmd[0]
                     print(f'{missing_cmd}: command not found', file=sys.stderr)
                 except Exception as e:
                     print(str(e), file=sys.stderr)
+                    
+                
+                continue
+                
+            else:
+            
+                try:
+                    p1 = subprocess.Popen(left_cmd, stdout=subprocess.PIPE)
+                    p2 = subprocess.Popen(right_cmd, stdin=p1.stdout)
+                    p1.stdout.close()
+                    p2.communicate()
+                except FileNotFoundError:
+                    missing_cmd = left_cmd[0] if not shutil.which(left_cmd[0]) else right_cmd[0]
+                    print(f'{missing_cmd}: command not found', file=sys.stderr)
+                except Exception as e:
+                    print(str(e), file=sys.stderr)
+                
                 
                 continue
             
