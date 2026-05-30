@@ -2,9 +2,8 @@ import sys
 import shutil
 import subprocess
 import os
-import readline  # 1. NEW: Import the readline module
+import readline 
 
-# 2. NEW: Setup our custom autocompletion
 def setup_autocompletion():
     builtin_commands = ["echo", "exit", "type", "pwd", "cd"]
     completion_matches = []
@@ -15,7 +14,6 @@ def setup_autocompletion():
         if state == 0:
             matches = set()
             
-            # 1. Add matching built-in commands
             for cmd in builtin_commands:
                 if cmd.startswith(text):
                     matches.add(cmd)
@@ -32,7 +30,6 @@ def setup_autocompletion():
                                     if os.path.isfile(filepath) and os.access(filepath, os.X_OK):
                                         matches.add(filename)
                         except Exception:
-                            # Catch any broken symlinks or permission errors silently
                             pass
             
             completion_matches = sorted(list(matches))
@@ -171,7 +168,15 @@ def main():
             commands.pop(idx)
             redirect_file = commands.pop(idx)
             operation = "a"
-        
+        elif "|" in commands:
+            op="|"
+            idx = commands.index(op)
+            commands.pop(idx)
+            try:
+                output = subprocess.check_output(commands[:idx], stderr=subprocess.STDOUT)
+                subprocess.run(commands[idx:], input=output)
+            except subprocess.CalledProcessError as e:
+                print(e.output.decode(), file=sys.stderr)
         original_stdout = sys.stdout
         original_stderr = sys.stderr
         output_file_handle = None
