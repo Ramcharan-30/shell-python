@@ -118,7 +118,7 @@ def change_directory(path=None):
         print(f"cd: {path}: No such file or directory", file=sys.stderr)
 
 def main():
-    # 3. NEW: Activate the autocompletion before the infinite loop starts
+    builtin_commands = ["echo", "exit", "type", "pwd", "cd"]
     setup_autocompletion()
 
     while(1): 
@@ -143,6 +143,34 @@ def main():
             idx = commands.index("|")
             left_cmd = commands[:idx]
             right_cmd = commands[idx + 1:] 
+            if left_cmd[0] in builtin_commands or right_cmd[0] in builtin_commands:
+                try:
+                    if left_cmd[0] in builtin_commands:
+                        if left_cmd[0] == "echo":
+                            output = " ".join(left_cmd[1:]) + "\n"
+                        elif left_cmd[0] == "type":
+                            output = type_command(left_cmd[1] if len(left_cmd) > 1 else "")
+                        elif left_cmd[0] == "pwd":
+                            output = os.getcwd() + "\n"
+                        elif left_cmd[0] == "cd":
+                            change_directory(left_cmd[1] if len(left_cmd) > 1 else None)
+                            continue
+                        else:
+                            output = ""
+                    else:
+                        output = subprocess.check_output(left_cmd).decode()
+
+                    if right_cmd[0] in builtin_commands:
+                        if right_cmd[0] == "echo":
+                            print(output, end="")
+                        elif right_cmd[0] == "type":
+                            type_command(right_cmd[1] if len(right_cmd) > 1 else "")
+                        elif right_cmd[0] == "pwd":
+                            print(os.getcwd())
+                        elif right_cmd[0] == "cd":
+                            change_directory(right_cmd[1] if len(right_cmd) > 1 else None)
+                    else:
+                        subprocess.run(right_cmd, input=output.encode())
             
             try:
                 
