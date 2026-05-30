@@ -4,67 +4,55 @@ import subprocess
 import os
 import readline 
 def multipipelines(commands):
-    builtin_commands = ["echo", "exit", "type", "pwd", "cd"]
+    # 1. SPLIT COMMANDS INTO CHUNKS
+    # This turns ['cat', 'file', '|', 'wc'] into [['cat', 'file'], ['wc']]
+    chunks = []
+    temp = []
+    for token in commands:
+        if token == "|":
+            chunks.append(temp)
+            temp = []
+        else:
+            temp.append(token)
+    chunks.append(temp) # Append the final command
 
-    for i in range(len(commands)-1):
-        if commands[i] == "|":
-            left_cmd = commands[:i]
-            right_cmd = commands[i + 1:] 
-            if left_cmd[0] in builtin_commands or right_cmd[0] in builtin_commands:
-                try:
-                    # 1. EXECUTE LEFT COMMAND (Capture Output)
-                    if left_cmd[0] in builtin_commands:
-                        if left_cmd[0] == "echo":
-                            output = " ".join(left_cmd[1:]) + "\n"
-                        elif left_cmd[0] == "pwd":
-                            output = os.getcwd() + "\n"
-                        elif left_cmd[0] == "cd":
-                            change_directory(left_cmd[1] if len(left_cmd) > 1 else None)
-                            output = ""
-                        elif left_cmd[0] == "type":
-                            # Replicate type logic to generate a string instead of printing
-                            arg = left_cmd[1] if len(left_cmd) > 1 else ""
-                            if not arg:
-                                output = "type: usage: type name\n"
-                            elif arg in builtin_commands:
-                                output = f"{arg} is a shell builtin\n"
-                            elif p := shutil.which(arg):
-                                output = f"{arg} is {p}\n"
-                            else:
-                                output = f"{arg} not found\n"
-                    else:
-                        # External command on the left
-                        output = subprocess.check_output(left_cmd, text=True)
+    # 2. BUILD THE ASSEMBLY LINE
+    processes = []
+    prev_process = None
 
-                    # 2. EXECUTE RIGHT COMMAND
-                    if right_cmd[0] in builtin_commands:
-                        # Built-ins ignore stdin in Unix! Just run them normally.
-                        if right_cmd[0] == "echo":
-                            echo(right_cmd[1:])
-                        elif right_cmd[0] == "type":
-                            type_command(right_cmd[1] if len(right_cmd) > 1 else "")
-                        elif right_cmd[0] == "pwd":
-                            printdirectory()
-                        elif right_cmd[0] == "cd":
-                            change_directory(right_cmd[1] if len(right_cmd) > 1 else None)
-                    else:
-                        
-                        subprocess.run(right_cmd, input=output, text=True)
-                except FileNotFoundError:
-                    missing_cmd = left_cmd[0] if not shutil.which(left_cmd[0]) else right_cmd[0]
-                    print(f'{missing_cmd}: command not found', file=sys.stderr)
-            try:
-                p1 = subprocess.Popen(left_cmd, stdout=subprocess.PIPE)
-                p2 = subprocess.Popen(right_cmd, stdin=p1.stdout)
-                p1.stdout.close()
-                p2.communicate()
-            except FileNotFoundError:
-                missing_cmd = left_cmd[0] if not shutil.which(left_cmd[0]) else right_cmd[0]
-                print(f'{missing_cmd}: command not found', file=sys.stderr)
-            except Exception as e:
-                print(str(e), file=sys.stderr)
+    for i, cmd in enumerate(chunks):
+        is_last_command = (i == len(chunks) - 1)
+        
+        try:
+            # stdin comes from the previous process (None for the very first command)
+            stdin_stream = prev_process.stdout if prev_process else None
             
-            break
+            # stdout goes to a PIPE, unless it's the final command (which goes to screen)
+            stdout_stream = None if is_last_command else subprocess.PIPE
+            
+            # Start the current process
+            p = subprocess.Popen(cmd, stdin=stdin_stream, stdout=stdout_stream)
+            
+            # CRITICAL: Close the parent's copy of the previous stdout.
+            # This ensures that commands like 'tail' know when to stop!
+            if prev_process:
+                prev_process.stdout.close()
+                
+            # Set this process as the "previous" one for the next loop iteration
+            prev_process = p
+            processes.append(p)
+            
+        except FileNotFoundError:
+            print(f"{cmd[0]}: command not found", file=sys.stderr)
+            return # Abort the pipeline if a command is invalid
+        except Exception as e:
+            print(str(e), file=sys.stderr)
+            return
+            
+    # 3. WAIT FOR THE END
+    # We only need to wait for the very last command to finish executing
+    if processes:
+        processes[-1].communicate()
 def setup_autocompletion():
     builtin_commands = ["echo", "exit", "type", "pwd", "cd"]
     completion_matches = []
