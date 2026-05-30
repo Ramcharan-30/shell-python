@@ -174,21 +174,22 @@ def main():
                 except FileNotFoundError as e:
                     missing_cmd = left_cmd[0] if not shutil.which(left_cmd[0]) else right_cmd[0]
                     print(f'{missing_cmd}: command not found', file=sys.stderr)
-            try:
+            else:
+                try:
                 
-                p1 = subprocess.Popen(left_cmd, stdout=subprocess.PIPE)
-                p2 = subprocess.Popen(right_cmd, stdin=p1.stdout)
-                p1.stdout.close()
-                p2.communicate()
+                    p1 = subprocess.Popen(left_cmd, stdout=subprocess.PIPE)
+                    p2 = subprocess.Popen(right_cmd, stdin=p1.stdout)
+                    p1.stdout.close()
+                    p2.communicate()
                 
-            except FileNotFoundError as e:
+                 except FileNotFoundError as e:
                 # Extract the missing command name (either from left or right)
-                missing_cmd = left_cmd[0] if not shutil.which(left_cmd[0]) else right_cmd[0]
-                print(f'{missing_cmd}: command not found', file=sys.stderr)
-            except Exception as e:
-                print(str(e), file=sys.stderr)
+                    missing_cmd = left_cmd[0] if not shutil.which(left_cmd[0]) else right_cmd[0]
+                    print(f'{missing_cmd}: command not found', file=sys.stderr)
+                except Exception as e:
+                    print(str(e), file=sys.stderr)
                 
-            continue
+                continue
             
         elif "2>" in commands:
             idx = commands.index("2>")
