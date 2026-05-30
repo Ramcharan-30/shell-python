@@ -50,7 +50,9 @@ def multipipelines(commands):
                     else:
                         
                         subprocess.run(right_cmd, input=output, text=True)
-            
+                except FileNotFoundError:
+                    missing_cmd = left_cmd[0] if not shutil.which(left_cmd[0]) else right_cmd[0]
+                    print(f'{missing_cmd}: command not found', file=sys.stderr)
             try:
                 p1 = subprocess.Popen(left_cmd, stdout=subprocess.PIPE)
                 p2 = subprocess.Popen(right_cmd, stdin=p1.stdout)
