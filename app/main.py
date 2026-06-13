@@ -99,55 +99,8 @@ def multipipelines(commands):
     # 3. WAIT FOR COMPLETION
     if processes:
         processes[-1].communicate()
-    # 1. SPLIT COMMANDS INTO CHUNKS
-    # This turns ['cat', 'file', '|', 'wc'] into [['cat', 'file'], ['wc']]
-    chunks = []
-    temp = []
-    for token in commands:
-        if token == "|":
-            chunks.append(temp)
-            temp = []
-        else:
-            temp.append(token)
-    chunks.append(temp) # Append the final command
 
-    # 2. BUILD THE ASSEMBLY LINE
-    processes = []
-    prev_process = None
 
-    for i, cmd in enumerate(chunks):
-        is_last_command = (i == len(chunks) - 1)
-        
-        try:
-            # stdin comes from the previous process (None for the very first command)
-            stdin_stream = prev_process.stdout if prev_process else None
-            
-            # stdout goes to a PIPE, unless it's the final command (which goes to screen)
-            stdout_stream = None if is_last_command else subprocess.PIPE
-            
-            # Start the current process
-            p = subprocess.Popen(cmd, stdin=stdin_stream, stdout=stdout_stream)
-            
-            # CRITICAL: Close the parent's copy of the previous stdout.
-            # This ensures that commands like 'tail' know when to stop!
-            if prev_process:
-                prev_process.stdout.close()
-                
-            # Set this process as the "previous" one for the next loop iteration
-            prev_process = p
-            processes.append(p)
-            
-        except FileNotFoundError:
-            print(f"{cmd[0]}: command not found", file=sys.stderr)
-            return # Abort the pipeline if a command is invalid
-        except Exception as e:
-            print(str(e), file=sys.stderr)
-            return
-            
-    # 3. WAIT FOR THE END
-    # We only need to wait for the very last command to finish executing
-    if processes:
-        processes[-1].communicate()
 def setup_autocompletion():
     builtin_commands = ["echo", "exit", "type", "pwd", "cd"]
     completion_matches = []
