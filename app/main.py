@@ -4,6 +4,101 @@ import subprocess
 import os
 import readline 
 def multipipelines(commands):
+    builtin_commands = ["echo", "exit", "type", "pwd", "cd"]
+    
+    # 1. SPLIT COMMANDS INTO CHUNKS
+    chunks = []
+    temp = []
+    for token in commands:
+        if token == "|":
+            chunks.append(temp)
+            temp = []
+        else:
+            temp.append(token)
+    chunks.append(temp)
+
+    # 2. BUILD THE ASSEMBLY LINE
+    processes = []
+    prev_process = None
+    prev_output_str = None  # Stores output if the previous command was a Python built-in
+
+    for i, cmd in enumerate(chunks):
+        is_last_command = (i == len(chunks) - 1)
+
+        if cmd[0] in builtin_commands:
+            # --- HANDLE PYTHON BUILT-INS ---
+            
+            # Built-ins ignore stdin. If there's a previous external process piping into us,
+            # close its stdout so it gets a SIGPIPE signal and stops running.
+            if prev_process:
+                prev_process.stdout.close()
+                prev_process = None 
+
+            # Execute the built-in and capture the output as a string
+            output_str = ""
+            if cmd[0] == "echo":
+                output_str = " ".join(cmd[1:]) + "\n"
+            elif cmd[0] == "pwd":
+                output_str = os.getcwd() + "\n"
+            elif cmd[0] == "cd":
+                change_directory(cmd[1] if len(cmd) > 1 else None)
+            elif cmd[0] == "exit":
+                sys.exit(0)
+            elif cmd[0] == "type":
+                arg = cmd[1] if len(cmd) > 1 else ""
+                if not arg:
+                    output_str = "type: usage: type name\n"
+                elif arg in builtin_commands:
+                    output_str = f"{arg} is a shell builtin\n"
+                elif p := shutil.which(arg):
+                    output_str = f"{arg} is {p}\n"
+                else:
+                    output_str = f"{arg} not found\n"
+
+            # Route the output
+            if is_last_command:
+                sys.stdout.write(output_str)
+                sys.stdout.flush()
+            else:
+                prev_output_str = output_str # Save it to feed into the next pipe!
+
+        else:
+            # --- HANDLE EXTERNAL OS COMMANDS ---
+            try:
+                # Figure out where stdin comes from
+                stdin_stream = None
+                if prev_process:
+                    stdin_stream = prev_process.stdout
+                elif prev_output_str is not None:
+                    stdin_stream = subprocess.PIPE # Open a pipe so we can write our built-in string to it
+
+                stdout_stream = None if is_last_command else subprocess.PIPE
+
+                # Start the external process
+                p = subprocess.Popen(cmd, stdin=stdin_stream, stdout=stdout_stream)
+
+                # Connect the pipes
+                if prev_process:
+                    prev_process.stdout.close()
+                elif prev_output_str is not None:
+                    # Write the built-in string directly into the OS pipe and close it
+                    p.stdin.write(prev_output_str.encode())
+                    p.stdin.close()
+                    prev_output_str = None
+
+                prev_process = p
+                processes.append(p)
+
+            except FileNotFoundError:
+                print(f"{cmd[0]}: command not found", file=sys.stderr)
+                return
+            except Exception as e:
+                print(str(e), file=sys.stderr)
+                return
+
+    # 3. WAIT FOR COMPLETION
+    if processes:
+        processes[-1].communicate()
     # 1. SPLIT COMMANDS INTO CHUNKS
     # This turns ['cat', 'file', '|', 'wc'] into [['cat', 'file'], ['wc']]
     chunks = []
