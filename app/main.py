@@ -95,10 +95,8 @@ def multipipelines(commands):
             except Exception as e:
                 print(str(e), file=sys.stderr)
                 return
-
-    # 3. WAIT FOR COMPLETION
-    if processes:
-        processes[-1].communicate()
+    for p in processes:
+        p.wait()
 
 
 def setup_autocompletion():
