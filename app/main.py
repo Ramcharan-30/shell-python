@@ -2,108 +2,17 @@ import sys
 import shutil
 import subprocess
 import os
-import readline 
-def history():
-    i=1
-    for hist in readline.get_history_list():
-        print(f"{i}: {hist}")
-        i += 1
+import readline
 
-def multipipelines(commands):
-    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history"]
-    
-    # 1. SPLIT COMMANDS INTO CHUNKS
-    chunks = []
-    temp = []
-    for token in commands:
-        if token == "|":
-            chunks.append(temp)
-            temp = []
-        else:
-            temp.append(token)
-    chunks.append(temp)
+# Global list to track our command history
+HISTORY_LIST = []
 
-    # 2. BUILD THE ASSEMBLY LINE
-    processes = []
-    prev_process = None
-    prev_output_str = None  # Stores output if the previous command was a Python built-in
-
-    for i, cmd in enumerate(chunks):
-        is_last_command = (i == len(chunks) - 1)
-
-        if cmd[0] in builtin_commands:
-            # --- HANDLE PYTHON BUILT-INS ---
-            
-            # Built-ins ignore stdin. If there's a previous external process piping into us,
-            # close its stdout so it gets a SIGPIPE signal and stops running.
-            if prev_process:
-                prev_process.stdout.close()
-                prev_process = None 
-
-            # Execute the built-in and capture the output as a string
-            output_str = ""
-            if cmd[0] == "echo":
-                output_str = " ".join(cmd[1:]) + "\n"
-            elif cmd[0] == "pwd":
-                output_str = os.getcwd() + "\n"
-            elif cmd[0] == "cd":
-                change_directory(cmd[1] if len(cmd) > 1 else None)
-            elif cmd[0] == "exit":
-                sys.exit(0)
-            elif cmd[0] == "type":
-                arg = cmd[1] if len(cmd) > 1 else ""
-                if not arg:
-                    output_str = "type: usage: type name\n"
-                elif arg in builtin_commands:
-                    output_str = f"{arg} is a shell builtin\n"
-                elif p := shutil.which(arg):
-                    output_str = f"{arg} is {p}\n"
-                else:
-                    output_str = f"{arg} not found\n"
-
-            # Route the output
-            if is_last_command:
-                sys.stdout.write(output_str)
-                sys.stdout.flush()
-            else:
-                prev_output_str = output_str # Save it to feed into the next pipe!
-
-        else:
-            # --- HANDLE EXTERNAL OS COMMANDS ---
-            try:
-                # Figure out where stdin comes from
-                stdin_stream = None
-                if prev_process:
-                    stdin_stream = prev_process.stdout
-                elif prev_output_str is not None:
-                    stdin_stream = subprocess.PIPE # Open a pipe so we can write our built-in string to it
-
-                stdout_stream = None if is_last_command else subprocess.PIPE
-
-                # Start the external process
-                p = subprocess.Popen(cmd, stdin=stdin_stream, stdout=stdout_stream)
-
-                # Connect the pipes
-                if prev_process:
-                    prev_process.stdout.close()
-                elif prev_output_str is not None:
-                    # Write the built-in string directly into the OS pipe and close it
-                    p.stdin.write(prev_output_str.encode())
-                    p.stdin.close()
-                    prev_output_str = None
-
-                prev_process = p
-                processes.append(p)
-
-            except FileNotFoundError:
-                print(f"{cmd[0]}: command not found", file=sys.stderr)
-                return
-            except Exception as e:
-                print(str(e), file=sys.stderr)
-                return
-    for p in processes:
-        p.wait()
-
+def get_history_output():
+    output = ""
+    for i, cmd in enumerate(HISTORY_LIST, 1):
+        # >5 pads the number to 5 characters, exactly like Bash history
+        output += f"{i:>5}  {cmd}\n"
+    return output
 
 def setup_autocompletion():
     builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history"]
@@ -115,6 +24,7 @@ def setup_autocompletion():
         if state == 0:
             matches = set()
             
+            # 1. Add matching built-in commands
             for cmd in builtin_commands:
                 if cmd.startswith(text):
                     matches.add(cmd)
@@ -140,10 +50,8 @@ def setup_autocompletion():
         else:
             return None
 
-    # THE CRITICAL MISSING LINE: Tell readline to actually use our function!
     readline.set_completer(completer)
 
-    # Bind the tab key
     if 'libedit' in readline.__doc__:
         readline.parse_and_bind("bind ^I rl_complete")
     else:
@@ -218,17 +126,107 @@ def change_directory(path=None):
     except FileNotFoundError:
         print(f"cd: {path}: No such file or directory", file=sys.stderr)
 
+def multipipelines(commands):
+    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history"]
+    
+    # 1. SPLIT COMMANDS INTO CHUNKS
+    chunks = []
+    temp = []
+    for token in commands:
+        if token == "|":
+            chunks.append(temp)
+            temp = []
+        else:
+            temp.append(token)
+    chunks.append(temp)
+
+    # 2. BUILD THE ASSEMBLY LINE
+    processes = []
+    prev_process = None
+    prev_output_str = None  
+
+    for i, cmd in enumerate(chunks):
+        is_last_command = (i == len(chunks) - 1)
+
+        if cmd[0] in builtin_commands:
+            # --- HANDLE PYTHON BUILT-INS ---
+            if prev_process:
+                prev_process.stdout.close()
+                prev_process = None 
+
+            output_str = ""
+            if cmd[0] == "echo":
+                output_str = " ".join(cmd[1:]) + "\n"
+            elif cmd[0] == "pwd":
+                output_str = os.getcwd() + "\n"
+            elif cmd[0] == "cd":
+                change_directory(cmd[1] if len(cmd) > 1 else None)
+            elif cmd[0] == "exit":
+                sys.exit(0)
+            elif cmd[0] == "history":
+                output_str = get_history_output()
+            elif cmd[0] == "type":
+                arg = cmd[1] if len(cmd) > 1 else ""
+                if not arg:
+                    output_str = "type: usage: type name\n"
+                elif arg in builtin_commands:
+                    output_str = f"{arg} is a shell builtin\n"
+                elif p := shutil.which(arg):
+                    output_str = f"{arg} is {p}\n"
+                else:
+                    output_str = f"{arg} not found\n"
+
+            # Route the output
+            if is_last_command:
+                sys.stdout.write(output_str)
+                sys.stdout.flush()
+            else:
+                prev_output_str = output_str
+
+        else:
+            # --- HANDLE EXTERNAL OS COMMANDS ---
+            try:
+                stdin_stream = None
+                if prev_process:
+                    stdin_stream = prev_process.stdout
+                elif prev_output_str is not None:
+                    stdin_stream = subprocess.PIPE 
+
+                stdout_stream = None if is_last_command else subprocess.PIPE
+
+                p = subprocess.Popen(cmd, stdin=stdin_stream, stdout=stdout_stream)
+
+                if prev_process:
+                    prev_process.stdout.close()
+                elif prev_output_str is not None:
+                    p.stdin.write(prev_output_str.encode())
+                    p.stdin.close()
+                    prev_output_str = None
+
+                prev_process = p
+                processes.append(p)
+
+            except FileNotFoundError:
+                print(f"{cmd[0]}: command not found", file=sys.stderr)
+                return
+            except Exception as e:
+                print(str(e), file=sys.stderr)
+                return
+                
+    # 3. WAIT FOR COMPLETION
+    for p in processes:
+        p.wait()
+
 def main():
-    builtin_commands = ["echo", "exit", "type", "pwd", "cd"]
     setup_autocompletion()
 
     while(1): 
-        # UPDATED: Use input("$ ") instead of sys.stdout.write. 
-        # This allows readline to redraw the line correctly without deleting the prompt.
         try:
             command = input("$ ")
+            if command.strip():  
+                HISTORY_LIST.append(command)
         except EOFError:
-            break # Exits cleanly if the tester sends an EOF signal
+            break 
         
         commands = parse_args(command)
         
@@ -239,7 +237,6 @@ def main():
         redirect_stream = None 
         operation = None
         
-        # REDIRECTION LOGIC
         # REDIRECTION LOGIC
         if "|" in commands:
             multipipelines(commands)
@@ -297,6 +294,8 @@ def main():
                 printdirectory()
             elif commands[0] == "cd":
                 change_directory(commands[1] if len(commands) > 1 else None)
+            elif commands[0] == "history":
+                print(get_history_output(), end="")
             elif path := shutil.which(commands[0]):
                 if redirect_stream == "stdout":
                     subprocess.run(commands, stdout=output_file_handle) 
