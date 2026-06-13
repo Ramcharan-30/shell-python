@@ -3,8 +3,12 @@ import shutil
 import subprocess
 import os
 import readline 
+def history():
+    for hist in readline.get_history_list():
+        print(hist)
+
 def multipipelines(commands):
-    builtin_commands = ["echo", "exit", "type", "pwd", "cd"]
+    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history"]
     
     # 1. SPLIT COMMANDS INTO CHUNKS
     chunks = []
@@ -100,7 +104,7 @@ def multipipelines(commands):
 
 
 def setup_autocompletion():
-    builtin_commands = ["echo", "exit", "type", "pwd", "cd"]
+    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history"]
     completion_matches = []
 
     def completer(text, state):
@@ -192,7 +196,7 @@ def type_command(args):
         print("type: usage: type name")
         return
 
-    builtin_commands = ["echo", "exit", "type", "pwd", "cd"]
+    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history"]
     if args in builtin_commands:
         print(f"{args} is a shell builtin")
     elif path := shutil.which(args):
