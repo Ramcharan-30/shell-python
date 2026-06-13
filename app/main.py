@@ -7,22 +7,29 @@ import readline
 # Global list to track our command history
 HISTORY_LIST = []
 
-def get_history_output(num):
-
+def get_history_output(num=None):
     output = ""
+    history_to_show = HISTORY_LIST
+    start_num = 1
+    
     if num is not None:
         try:
             num = int(num)
             if num < 0:
                 raise ValueError
+            
+            # Slice the list to get only the last 'n' items
+            start_index = max(0, len(HISTORY_LIST) - num)
+            history_to_show = HISTORY_LIST[start_index:]
+            # Calculate the correct starting number so history IDs don't reset to 1
+            start_num = start_index + 1
+            
         except ValueError:
             return "history: usage: history [n]\n"
 
-        start_index = max(0, len(HISTORY_LIST) - num)
-        history_to_show = HISTORY_LIST[start_index:]
-    for i, cmd in enumerate(history_to_show, 1):
-        # >5 pads the number to 5 characters, exactly like Bash history
+    for i, cmd in enumerate(history_to_show, start_num):
         output += f"{i:>5}  {cmd}\n"
+        
     return output
 
 def setup_autocompletion():
@@ -175,7 +182,8 @@ def multipipelines(commands):
             elif cmd[0] == "exit":
                 sys.exit(0)
             elif cmd[0] == "history":
-                output_str = get_history_output()
+                arg = cmd[1] if len(cmd) > 1 else None
+                output_str = get_history_output(arg)
             elif cmd[0] == "type":
                 arg = cmd[1] if len(cmd) > 1 else ""
                 if not arg:
@@ -306,7 +314,8 @@ def main():
             elif commands[0] == "cd":
                 change_directory(commands[1] if len(commands) > 1 else None)
             elif commands[0] == "history":
-                print(get_history_output(commands[1]), end="")
+                arg = commands[1] if len(commands) > 1 else None
+                print(get_history_output(arg), end="")
             elif path := shutil.which(commands[0]):
                 if redirect_stream == "stdout":
                     subprocess.run(commands, stdout=output_file_handle) 
