@@ -7,9 +7,20 @@ import readline
 # Global list to track our command history
 HISTORY_LIST = []
 
-def get_history_output():
+def get_history_output(num):
+
     output = ""
-    for i, cmd in enumerate(HISTORY_LIST, 1):
+    if num is not None:
+        try:
+            num = int(num)
+            if num < 0:
+                raise ValueError
+        except ValueError:
+            return "history: usage: history [n]\n"
+
+        start_index = max(0, len(HISTORY_LIST) - num)
+        history_to_show = HISTORY_LIST[start_index:]
+    for i, cmd in enumerate(history_to_show, 1):
         # >5 pads the number to 5 characters, exactly like Bash history
         output += f"{i:>5}  {cmd}\n"
     return output
@@ -295,7 +306,7 @@ def main():
             elif commands[0] == "cd":
                 change_directory(commands[1] if len(commands) > 1 else None)
             elif commands[0] == "history":
-                print(get_history_output(), end="")
+                print(get_history_output(commands[1]), end="")
             elif path := shutil.which(commands[0]):
                 if redirect_stream == "stdout":
                     subprocess.run(commands, stdout=output_file_handle) 
