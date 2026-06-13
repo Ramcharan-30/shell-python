@@ -4,8 +4,10 @@ import subprocess
 import os
 import readline 
 def history():
+    i=1
     for hist in readline.get_history_list():
-        print(hist)
+        print(f"{i}: {hist}")
+        i += 1
 
 def multipipelines(commands):
     builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history"]
