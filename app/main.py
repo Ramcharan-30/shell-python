@@ -97,24 +97,40 @@ def setup_autocompletion():
         if state == 0:
             matches = set()
             
-            # 1. Add matching built-in commands
-            for cmd in builtin_commands:
-                if cmd.startswith(text):
-                    matches.add(cmd)
+            # Grab the entire line the user has typed so far
+            line_buffer = readline.get_line_buffer()
             
-            # 2. Add matching external executables from PATH
-            path_env = os.environ.get("PATH", "")
-            if path_env:
-                for directory in path_env.split(os.pathsep):
-                    if os.path.isdir(directory):
-                        try:
-                            for filename in os.listdir(directory):
-                                if filename.startswith(text):
-                                    filepath = os.path.join(directory, filename)
-                                    if os.path.isfile(filepath) and os.access(filepath, os.X_OK):
-                                        matches.add(filename)
-                        except Exception:
-                            pass
+            # get_begidx() tells us the starting index of the current word.
+            # If it's 0, or preceded only by spaces, we are completing a COMMAND.
+            if readline.get_begidx() == 0 or line_buffer[:readline.get_begidx()].strip() == "":
+                
+                # 1. Add matching built-in commands
+                for cmd in builtin_commands:
+                    if cmd.startswith(text):
+                        matches.add(cmd)
+                
+                # 2. Add matching external executables from PATH
+                path_env = os.environ.get("PATH", "")
+                if path_env:
+                    for directory in path_env.split(os.pathsep):
+                        if os.path.isdir(directory):
+                            try:
+                                for filename in os.listdir(directory):
+                                    if filename.startswith(text):
+                                        filepath = os.path.join(directory, filename)
+                                        if os.path.isfile(filepath) and os.access(filepath, os.X_OK):
+                                            matches.add(filename)
+                            except Exception:
+                                pass
+            else:
+                # --- FILENAME COMPLETION ---
+                # We are completing an ARGUMENT. Search the current directory!
+                try:
+                    for filename in os.listdir('.'):
+                        if filename.startswith(text):
+                            matches.add(filename)
+                except Exception:
+                    pass
             
             completion_matches = sorted(list(matches))
 
@@ -123,6 +139,8 @@ def setup_autocompletion():
         else:
             return None
 
+    # Tell readline not to split words on slashes (useful for file paths later!)
+    readline.set_completer_delims(' \t\n;')
     readline.set_completer(completer)
 
     if 'libedit' in readline.__doc__:
