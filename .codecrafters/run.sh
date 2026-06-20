@@ -8,7 +8,7 @@
 
 set -e # Exit on failure
 
-exec uv run --quiet -m app.main "$@"
+exec uv run --quiet -m app.main "$@" # anti-windows-bug
 
 
 
