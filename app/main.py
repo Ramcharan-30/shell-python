@@ -107,10 +107,27 @@ def setup_autocompletion():
                             except Exception:
                                 pass
             else:
+                # --- NEW NESTED PATH COMPLETION ---
                 try:
-                    for filename in os.listdir('.'):
-                        if filename.startswith(text):
-                            matches.add(filename)
+                    # If there's a slash, split it into directory and prefix
+                    if '/' in text:
+                        dir_path = os.path.dirname(text)
+                        prefix = os.path.basename(text)
+                        search_dir = dir_path
+                    else:
+                        dir_path = ""
+                        prefix = text
+                        search_dir = "." # Default to current directory
+
+                    # Search the target directory
+                    if os.path.isdir(search_dir):
+                        for filename in os.listdir(search_dir):
+                            if filename.startswith(prefix):
+                                # Reconstruct the full path to hand back to readline
+                                if dir_path:
+                                    matches.add(f"{dir_path}/{filename}")
+                                else:
+                                    matches.add(filename)
                 except Exception:
                     pass
             
