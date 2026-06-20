@@ -45,13 +45,24 @@ def run_history(args):
                 with open(filepath, 'r') as f:
                     for line in f:
                         cmd = line.strip()
-                        # Ignore empty lines (like the <|EMPTY LINE|> in the test)
+                        # Ignore empty lines
                         if cmd: 
                             HISTORY_LIST.append(cmd)
             except FileNotFoundError:
-                pass # Fail silently if the file doesn't exist, like standard bash
-        return "" # Reading a file prints nothing to the screen
+                pass # Fail silently if the file doesn't exist
+        return "" 
         
+    # Handle the "-w" flag to write memory to a file
+    if args[0] == "-w":
+        if len(args) > 1:
+            filepath = args[1]
+            # 'w' mode automatically creates the file if it doesn't exist,
+            # or overwrites it if it does.
+            with open(filepath, 'w') as f:
+                for cmd in HISTORY_LIST:
+                    f.write(f"{cmd}\n") # \n guarantees the trailing newline!
+        return "" # Writing prints nothing to the screen
+
     # Otherwise, assume the argument is a number (e.g., "history 5")
     return get_history_output(args[0])
 
