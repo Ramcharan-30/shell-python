@@ -8,17 +8,51 @@ try:
 except ImportError:
     readline = None
 
-# Global list to track our command history
+# Global lists to track our command history
 HISTORY_LIST = []
 HISTORY_APPEND_INDEX = 0
-BACKGROUND_JOBS = []
+
+# NEW: Global state for background jobs
+BACKGROUND_JOBS = {}
+JOB_ORDER = []
+
+def get_marker(job_id):
+    # The most recent job gets '+', the second most recent gets '-', everything else gets a space
+    if len(JOB_ORDER) >= 1 and JOB_ORDER[-1] == job_id:
+        return "+"
+    elif len(JOB_ORDER) >= 2 and JOB_ORDER[-2] == job_id:
+        return "-"
+    else:
+        return " "
 
 def get_jobs_output():
     output = ""
-    for job in BACKGROUND_JOBS:
-        # [1]+  Running                 sleep 10 &
-        output += f"[{job['id']}]+  {'Running'.ljust(24)}{job['cmd']}\n"
+    # Always print jobs sequentially by ID
+    for job_id in sorted(BACKGROUND_JOBS.keys()):
+        job = BACKGROUND_JOBS[job_id]
+        marker = get_marker(job_id)
+        status_padded = job['status'].ljust(24) # Pads "Running" with 17 spaces
+        output += f"[{job_id}]{marker}  {status_padded}{job['cmd']}\n"
     return output
+
+def reap_jobs():
+    done_jobs = []
+    
+    # Check all active jobs to see if the OS has finished them
+    for job_id in sorted(BACKGROUND_JOBS.keys()):
+        job = BACKGROUND_JOBS[job_id]
+        # poll() returns None if it's still running, or an exit code if it's finished
+        if job['process'].poll() is not None:
+            job['status'] = 'Done'
+            marker = get_marker(job_id)
+            status_padded = job['status'].ljust(24)
+            print(f"[{job_id}]{marker}  {status_padded}{job['cmd']}")
+            done_jobs.append(job_id)
+            
+    # Clean up the dictionaries so the IDs can be recycled later
+    for job_id in done_jobs:
+        del BACKGROUND_JOBS[job_id]
+        JOB_ORDER.remove(job_id)
 
 def get_history_output(num=None):
     output = ""
@@ -87,7 +121,7 @@ def setup_autocompletion():
     if readline is None:
         return
 
-    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history","jobs"]
+    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history", "jobs"]
     completion_matches = []
 
     def completer(text, state):
@@ -97,11 +131,10 @@ def setup_autocompletion():
             matches = set()
             line_buffer = readline.get_line_buffer()
             
-            # --- COMMAND COMPLETION ---
             if readline.get_begidx() == 0 or line_buffer[:readline.get_begidx()].strip() == "":
                 for cmd in builtin_commands:
                     if cmd.startswith(text):
-                        matches.add(cmd + " ") # Add space for built-ins
+                        matches.add(cmd + " ")
                 
                 path_env = os.environ.get("PATH", "")
                 if path_env:
@@ -112,11 +145,10 @@ def setup_autocompletion():
                                     if filename.startswith(text):
                                         filepath = os.path.join(directory, filename)
                                         if os.path.isfile(filepath) and os.access(filepath, os.X_OK):
-                                            matches.add(filename + " ") # Add space for executables
+                                            matches.add(filename + " ")
                             except Exception:
                                 pass
             else:
-                # --- FILE & DIRECTORY COMPLETION ---
                 try:
                     if '/' in text:
                         dir_path = os.path.dirname(text)
@@ -125,18 +157,17 @@ def setup_autocompletion():
                     else:
                         dir_path = ""
                         prefix = text
-                        search_dir = "." # Default to current directory
+                        search_dir = "." 
 
                     if os.path.isdir(search_dir):
                         for filename in os.listdir(search_dir):
                             if filename.startswith(prefix):
                                 full_path = os.path.join(search_dir, filename)
                                 
-                                # Check if the match is a directory or a file
                                 if os.path.isdir(full_path):
-                                    suffix = "/"  # Directories get a slash
+                                    suffix = "/"  
                                 else:
-                                    suffix = " "  # Files get a space
+                                    suffix = " "  
                                     
                                 if dir_path:
                                     matches.add(f"{dir_path}/{filename}{suffix}")
@@ -148,7 +179,6 @@ def setup_autocompletion():
             completion_matches = sorted(list(matches))
 
         if state < len(completion_matches):
-            # Return the exact string (the suffix is already baked in above!)
             return completion_matches[state]
         else:
             return None
@@ -249,7 +279,7 @@ def save_history_on_exit():
             pass 
 
 def multipipelines(commands):
-    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history","jobs"]
+    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history", "jobs"]
     
     chunks = []
     temp = []
@@ -285,11 +315,7 @@ def multipipelines(commands):
                 sys.exit(0)
             elif cmd[0] == "history":
                 output_str = run_history(cmd[1:])
-            elif commands[0] == "history":
-                output = run_history(commands[1:])
-                if output:
-                    print(output, end="")
-            elif cmd[0] == "jobs":                        # UPDATED
+            elif cmd[0] == "jobs":
                 output_str = get_jobs_output()
             elif cmd[0] == "type":
                 arg = cmd[1] if len(cmd) > 1 else ""
@@ -345,6 +371,9 @@ def main():
     setup_autocompletion()
 
     while(1): 
+        # NEW: Automatically check for and print finished background jobs before the prompt
+        reap_jobs()
+        
         try:
             command = input("$ ")
             if command.strip():  
@@ -358,16 +387,18 @@ def main():
         if not commands:
             continue
 
-        # --- NEW: BACKGROUND JOB LOGIC ---
+        # Save the literal string they typed BEFORE we chop off the "&"
         original_cmd_str = " ".join(commands)
         
+        # Check if the command should run in the background
         is_background = False
         if commands[-1] == "&":
             is_background = True
-            commands.pop()
+            commands.pop() # Remove the token so the OS doesn't see it
             
-        if not commands:
+        if not commands: # Just in case they typed only "&"
             continue
+
         redirect_file = None
         redirect_stream = None 
         operation = None
@@ -433,11 +464,7 @@ def main():
                 output = run_history(commands[1:])
                 if output:
                     print(output, end="")
-            elif commands[0] == "history":
-                output = run_history(commands[1:])
-                if output:
-                    print(output, end="")
-            elif commands[0] == "jobs":                   # UPDATED
+            elif commands[0] == "jobs":
                 output = get_jobs_output()
                 if output:
                     print(output, end="")
@@ -450,17 +477,22 @@ def main():
                     p = subprocess.Popen(commands)
                     
                 if is_background:
-                    job_id = len(BACKGROUND_JOBS) + 1
+                    # RECYCLE LOGIC: Find the lowest available number starting from 1
+                    job_id = 1
+                    while job_id in BACKGROUND_JOBS:
+                        job_id += 1
+                        
                     print(f"[{job_id}] {p.pid}")
-                    # NEW: Save it to our tracking list!
-                    BACKGROUND_JOBS.append({
+                    BACKGROUND_JOBS[job_id] = {
                         'id': job_id,
                         'pid': p.pid,
                         'cmd': original_cmd_str,
-                        'process': p
-                    })
+                        'process': p,
+                        'status': 'Running'
+                    }
+                    JOB_ORDER.append(job_id)
                 else:
-                    p.wait() # Block the shell only if it's NOT a background job
+                    p.wait()
             else:
                 print(f'{commands[0]}: command not found', file=sys.stderr)
                     
