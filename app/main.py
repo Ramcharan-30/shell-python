@@ -11,6 +11,14 @@ except ImportError:
 # Global list to track our command history
 HISTORY_LIST = []
 HISTORY_APPEND_INDEX = 0
+BACKGROUND_JOBS = []
+
+def get_jobs_output():
+    output = ""
+    for job in BACKGROUND_JOBS:
+        # [1]+  Running                 sleep 10 &
+        output += f"[{job['id']}]+  {'Running'.ljust(24)}{job['cmd']}\n"
+    return output
 
 def get_history_output(num=None):
     output = ""
@@ -277,8 +285,12 @@ def multipipelines(commands):
                 sys.exit(0)
             elif cmd[0] == "history":
                 output_str = run_history(cmd[1:])
-            elif cmd[0] == "jobs":                   # NEW
-                output_str = ""
+            elif commands[0] == "history":
+                output = run_history(commands[1:])
+                if output:
+                    print(output, end="")
+            elif cmd[0] == "jobs":                        # UPDATED
+                output_str = get_jobs_output()
             elif cmd[0] == "type":
                 arg = cmd[1] if len(cmd) > 1 else ""
                 if not arg:
@@ -345,12 +357,16 @@ def main():
         
         if not commands:
             continue
+
+        # --- NEW: BACKGROUND JOB LOGIC ---
+        original_cmd_str = " ".join(commands)
+        
         is_background = False
         if commands[-1] == "&":
             is_background = True
-            commands.pop() # Remove the '&' so it isn't passed as an argument
+            commands.pop()
             
-        if not commands: # Just in case they typed only "&"
+        if not commands:
             continue
         redirect_file = None
         redirect_stream = None 
@@ -417,10 +433,15 @@ def main():
                 output = run_history(commands[1:])
                 if output:
                     print(output, end="")
-            elif commands[0] == "jobs":              # NEW
-                pass
+            elif commands[0] == "history":
+                output = run_history(commands[1:])
+                if output:
+                    print(output, end="")
+            elif commands[0] == "jobs":                   # UPDATED
+                output = get_jobs_output()
+                if output:
+                    print(output, end="")
             elif path := shutil.which(commands[0]):
-                # NEW: Use Popen instead of run so we can choose whether to wait!
                 if redirect_stream == "stdout":
                     p = subprocess.Popen(commands, stdout=output_file_handle) 
                 elif redirect_stream == "stderr":
@@ -429,8 +450,15 @@ def main():
                     p = subprocess.Popen(commands)
                     
                 if is_background:
-                    # For this stage, the instructions say to always use [1]
-                    print(f"[1] {p.pid}") 
+                    job_id = len(BACKGROUND_JOBS) + 1
+                    print(f"[{job_id}] {p.pid}")
+                    # NEW: Save it to our tracking list!
+                    BACKGROUND_JOBS.append({
+                        'id': job_id,
+                        'pid': p.pid,
+                        'cmd': original_cmd_str,
+                        'process': p
+                    })
                 else:
                     p.wait() # Block the shell only if it's NOT a background job
             else:
