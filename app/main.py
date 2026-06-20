@@ -290,7 +290,25 @@ def multipipelines(commands):
     for p in processes:
         p.wait()
 
+def load_history_on_startup():
+    global HISTORY_APPEND_INDEX
+    
+    # Check if the OS provided a HISTFILE path
+    histfile = os.environ.get("HISTFILE")
+    if histfile:
+        try:
+            with open(histfile, 'r') as f:
+                for line in f:
+                    cmd = line.strip()
+                    if cmd: 
+                        HISTORY_LIST.append(cmd)
+            
+            # Fast-forward our bookmark so we don't duplicate these later
+            HISTORY_APPEND_INDEX = len(HISTORY_LIST)
+        except FileNotFoundError:
+            pass # It's normal for this file not to exist on the very first boot
 def main():
+    load_history_on_startup()
     setup_autocompletion()
 
     while(1): 
