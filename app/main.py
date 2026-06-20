@@ -345,7 +345,13 @@ def main():
         
         if not commands:
             continue
-
+        is_background = False
+        if commands[-1] == "&":
+            is_background = True
+            commands.pop() # Remove the '&' so it isn't passed as an argument
+            
+        if not commands: # Just in case they typed only "&"
+            continue
         redirect_file = None
         redirect_stream = None 
         operation = None
@@ -414,12 +420,19 @@ def main():
             elif commands[0] == "jobs":              # NEW
                 pass
             elif path := shutil.which(commands[0]):
+                # NEW: Use Popen instead of run so we can choose whether to wait!
                 if redirect_stream == "stdout":
-                    subprocess.run(commands, stdout=output_file_handle) 
+                    p = subprocess.Popen(commands, stdout=output_file_handle) 
                 elif redirect_stream == "stderr":
-                    subprocess.run(commands, stderr=output_file_handle)
+                    p = subprocess.Popen(commands, stderr=output_file_handle)
                 else:
-                    subprocess.run(commands)
+                    p = subprocess.Popen(commands)
+                    
+                if is_background:
+                    # For this stage, the instructions say to always use [1]
+                    print(f"[1] {p.pid}") 
+                else:
+                    p.wait() # Block the shell only if it's NOT a background job
             else:
                 print(f'{commands[0]}: command not found', file=sys.stderr)
                     
