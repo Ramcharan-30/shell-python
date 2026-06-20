@@ -79,7 +79,7 @@ def setup_autocompletion():
     if readline is None:
         return
 
-    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history"]
+    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history","jobs"]
     completion_matches = []
 
     def completer(text, state):
@@ -196,7 +196,7 @@ def type_command(args):
         print("type: usage: type name")
         return
 
-    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history"]
+    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history", "jobs"]
     if args in builtin_commands:
         print(f"{args} is a shell builtin")
     elif path := shutil.which(args):
@@ -241,7 +241,7 @@ def save_history_on_exit():
             pass 
 
 def multipipelines(commands):
-    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history"]
+    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history","jobs"]
     
     chunks = []
     temp = []
@@ -277,6 +277,8 @@ def multipipelines(commands):
                 sys.exit(0)
             elif cmd[0] == "history":
                 output_str = run_history(cmd[1:])
+            elif cmd[0] == "jobs":                   # NEW
+                output_str = ""
             elif cmd[0] == "type":
                 arg = cmd[1] if len(cmd) > 1 else ""
                 if not arg:
@@ -409,6 +411,8 @@ def main():
                 output = run_history(commands[1:])
                 if output:
                     print(output, end="")
+            elif commands[0] == "jobs":              # NEW
+                pass
             elif path := shutil.which(commands[0]):
                 if redirect_stream == "stdout":
                     subprocess.run(commands, stdout=output_file_handle) 
