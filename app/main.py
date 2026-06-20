@@ -32,6 +32,29 @@ def get_history_output(num=None):
         
     return output
 
+def run_history(args):
+    # No arguments: just print all history
+    if not args:
+        return get_history_output(None)
+        
+    # Handle the "-r" flag to read from a file
+    if args[0] == "-r":
+        if len(args) > 1:
+            filepath = args[1]
+            try:
+                with open(filepath, 'r') as f:
+                    for line in f:
+                        cmd = line.strip()
+                        # Ignore empty lines (like the <|EMPTY LINE|> in the test)
+                        if cmd: 
+                            HISTORY_LIST.append(cmd)
+            except FileNotFoundError:
+                pass # Fail silently if the file doesn't exist, like standard bash
+        return "" # Reading a file prints nothing to the screen
+        
+    # Otherwise, assume the argument is a number (e.g., "history 5")
+    return get_history_output(args[0])
+
 def setup_autocompletion():
     builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history"]
     completion_matches = []
@@ -182,8 +205,7 @@ def multipipelines(commands):
             elif cmd[0] == "exit":
                 sys.exit(0)
             elif cmd[0] == "history":
-                arg = cmd[1] if len(cmd) > 1 else None
-                output_str = get_history_output(arg)
+                output_str = run_history(cmd[1:])
             elif cmd[0] == "type":
                 arg = cmd[1] if len(cmd) > 1 else ""
                 if not arg:
@@ -314,8 +336,9 @@ def main():
             elif commands[0] == "cd":
                 change_directory(commands[1] if len(commands) > 1 else None)
             elif commands[0] == "history":
-                arg = commands[1] if len(commands) > 1 else None
-                print(get_history_output(arg), end="")
+                output = run_history(commands[1:])
+                if output:
+                    print(output, end="")
             elif path := shutil.which(commands[0]):
                 if redirect_stream == "stdout":
                     subprocess.run(commands, stdout=output_file_handle) 
