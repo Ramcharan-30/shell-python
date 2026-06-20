@@ -12,7 +12,7 @@ except ImportError:
 HISTORY_LIST = []
 HISTORY_APPEND_INDEX = 0
 
-# NEW: Global state for background jobs
+# Global state for background jobs
 BACKGROUND_JOBS = {}
 JOB_ORDER = []
 
@@ -27,32 +27,33 @@ def get_marker(job_id):
 
 def get_jobs_output():
     output = ""
+    done_jobs = []
+
     # Always print jobs sequentially by ID
     for job_id in sorted(BACKGROUND_JOBS.keys()):
         job = BACKGROUND_JOBS[job_id]
         marker = get_marker(job_id)
-        status_padded = job['status'].ljust(24) # Pads "Running" with 17 spaces
-        output += f"[{job_id}]{marker}  {status_padded}{job['cmd']}\n"
-    return output
-
-def reap_jobs():
-    done_jobs = []
-    
-    # Check all active jobs to see if the OS has finished them
-    for job_id in sorted(BACKGROUND_JOBS.keys()):
-        job = BACKGROUND_JOBS[job_id]
-        # poll() returns None if it's still running, or an exit code if it's finished
+        
+        # Check if the process has finished since the last time we checked
         if job['process'].poll() is not None:
             job['status'] = 'Done'
-            marker = get_marker(job_id)
-            status_padded = job['status'].ljust(24)
-            print(f"[{job_id}]{marker}  {status_padded}{job['cmd']}")
             done_jobs.append(job_id)
-            
-    # Clean up the dictionaries so the IDs can be recycled later
+
+        status_padded = job['status'].ljust(24) # Pads with spaces to exactly 24 chars
+        cmd_string = job['cmd']
+        
+        # The 'Done' output explicitly removes the trailing ' &' if it exists
+        if job['status'] == 'Done' and cmd_string.endswith(" &"):
+            cmd_string = cmd_string[:-2]
+
+        output += f"[{job_id}]{marker}  {status_padded}{cmd_string}\n"
+
+    # Clean up the dictionaries AFTER displaying them as Done
     for job_id in done_jobs:
         del BACKGROUND_JOBS[job_id]
         JOB_ORDER.remove(job_id)
+
+    return output
 
 def get_history_output(num=None):
     output = ""
@@ -370,10 +371,7 @@ def main():
     load_history_on_startup()
     setup_autocompletion()
 
-    while(1): 
-        # NEW: Automatically check for and print finished background jobs before the prompt
-        reap_jobs()
-        
+    while(1):         
         try:
             command = input("$ ")
             if command.strip():  
