@@ -199,6 +199,37 @@ def change_directory(path=None):
     except FileNotFoundError:
         print(f"cd: {path}: No such file or directory", file=sys.stderr)
 
+def load_history_on_startup():
+    global HISTORY_APPEND_INDEX
+    
+    # Check if the OS provided a HISTFILE path
+    histfile = os.environ.get("HISTFILE")
+    if histfile:
+        try:
+            with open(histfile, 'r') as f:
+                for line in f:
+                    cmd = line.strip()
+                    if cmd: 
+                        HISTORY_LIST.append(cmd)
+            
+            # Fast-forward our bookmark so we don't duplicate these later
+            HISTORY_APPEND_INDEX = len(HISTORY_LIST)
+        except FileNotFoundError:
+            pass # It's normal for this file not to exist on the very first boot
+
+def save_history_on_exit():
+    # Check if the OS provided a HISTFILE path
+    histfile = os.environ.get("HISTFILE")
+    if histfile:
+        try:
+            # 'a' mode appends safely to the end of the file
+            with open(histfile, 'a') as f:
+                # Slice from the bookmark to the end so we don't write duplicates
+                for cmd in HISTORY_LIST[HISTORY_APPEND_INDEX:]:
+                    f.write(f"{cmd}\n")
+        except Exception:
+            pass # Fail silently if we don't have write permissions
+
 def multipipelines(commands):
     builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history"]
     
@@ -235,6 +266,7 @@ def multipipelines(commands):
             elif cmd[0] == "cd":
                 change_directory(cmd[1] if len(cmd) > 1 else None)
             elif cmd[0] == "exit":
+                save_history_on_exit() # NEW: Save before exiting via pipeline
                 sys.exit(0)
             elif cmd[0] == "history":
                 output_str = run_history(cmd[1:])
@@ -290,23 +322,6 @@ def multipipelines(commands):
     for p in processes:
         p.wait()
 
-def load_history_on_startup():
-    global HISTORY_APPEND_INDEX
-    
-    # Check if the OS provided a HISTFILE path
-    histfile = os.environ.get("HISTFILE")
-    if histfile:
-        try:
-            with open(histfile, 'r') as f:
-                for line in f:
-                    cmd = line.strip()
-                    if cmd: 
-                        HISTORY_LIST.append(cmd)
-            
-            # Fast-forward our bookmark so we don't duplicate these later
-            HISTORY_APPEND_INDEX = len(HISTORY_LIST)
-        except FileNotFoundError:
-            pass # It's normal for this file not to exist on the very first boot
 def main():
     load_history_on_startup()
     setup_autocompletion()
@@ -317,6 +332,7 @@ def main():
             if command.strip():  
                 HISTORY_LIST.append(command)
         except EOFError:
+            save_history_on_exit() # NEW: Save on Ctrl+D
             break 
         
         commands = parse_args(command)
@@ -376,6 +392,7 @@ def main():
 
         try:
             if commands[0] == "exit":
+                save_history_on_exit() # NEW: Save before single-command exit
                 sys.exit(0)
             elif commands[0] == "echo":
                 echo(commands[1:])
