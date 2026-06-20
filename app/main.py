@@ -2,7 +2,11 @@ import sys
 import shutil
 import subprocess
 import os
-import readline
+
+try:
+    import readline
+except ImportError:
+    readline = None
 
 # Global list to track our command history
 HISTORY_LIST = []
@@ -88,6 +92,9 @@ def run_history(args):
     return get_history_output(args[0])
 
 def setup_autocompletion():
+    if readline is None:
+        return
+
     builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history"]
     completion_matches = []
 
@@ -143,7 +150,7 @@ def setup_autocompletion():
     readline.set_completer_delims(' \t\n;')
     readline.set_completer(completer)
 
-    if 'libedit' in readline.__doc__:
+    if 'libedit' in (readline.__doc__ or ''):
         readline.parse_and_bind("bind ^I rl_complete")
     else:
         readline.parse_and_bind("tab: complete")
