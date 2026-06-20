@@ -6,6 +6,7 @@ import readline
 
 # Global list to track our command history
 HISTORY_LIST = []
+HISTORY_APPEND_INDEX = 0
 
 def get_history_output(num=None):
     output = ""
@@ -33,6 +34,8 @@ def get_history_output(num=None):
     return output
 
 def run_history(args):
+    global HISTORY_APPEND_INDEX # Tell Python we want to modify our global bookmark
+    
     # No arguments: just print all history
     if not args:
         return get_history_output(None)
@@ -45,23 +48,41 @@ def run_history(args):
                 with open(filepath, 'r') as f:
                     for line in f:
                         cmd = line.strip()
-                        # Ignore empty lines
                         if cmd: 
                             HISTORY_LIST.append(cmd)
             except FileNotFoundError:
-                pass # Fail silently if the file doesn't exist
+                pass
+            
+            # Fast-forward our bookmark so we don't accidentally write 
+            # these newly read commands back to the file later.
+            HISTORY_APPEND_INDEX = len(HISTORY_LIST)
         return "" 
         
-    # Handle the "-w" flag to write memory to a file
+    # Handle the "-w" flag to write EVERYTHING to a file
     if args[0] == "-w":
         if len(args) > 1:
             filepath = args[1]
-            # 'w' mode automatically creates the file if it doesn't exist,
-            # or overwrites it if it does.
             with open(filepath, 'w') as f:
                 for cmd in HISTORY_LIST:
-                    f.write(f"{cmd}\n") # \n guarantees the trailing newline!
-        return "" # Writing prints nothing to the screen
+                    f.write(f"{cmd}\n")
+                    
+            # We just wrote everything, so move the bookmark to the end
+            HISTORY_APPEND_INDEX = len(HISTORY_LIST)
+        return ""
+
+    # NEW: Handle the "-a" flag to APPEND only new commands
+    if args[0] == "-a":
+        if len(args) > 1:
+            filepath = args[1]
+            # 'a' mode opens the file for appending instead of overwriting
+            with open(filepath, 'a') as f: 
+                # Slice the list to only get commands AFTER our bookmark
+                for cmd in HISTORY_LIST[HISTORY_APPEND_INDEX:]:
+                    f.write(f"{cmd}\n")
+                    
+            # Move the bookmark to the very end of the list
+            HISTORY_APPEND_INDEX = len(HISTORY_LIST)
+        return ""
 
     # Otherwise, assume the argument is a number (e.g., "history 5")
     return get_history_output(args[0])
