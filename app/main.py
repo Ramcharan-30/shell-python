@@ -89,10 +89,11 @@ def setup_autocompletion():
             matches = set()
             line_buffer = readline.get_line_buffer()
             
+            # --- COMMAND COMPLETION ---
             if readline.get_begidx() == 0 or line_buffer[:readline.get_begidx()].strip() == "":
                 for cmd in builtin_commands:
                     if cmd.startswith(text):
-                        matches.add(cmd)
+                        matches.add(cmd + " ") # Add space for built-ins
                 
                 path_env = os.environ.get("PATH", "")
                 if path_env:
@@ -103,13 +104,12 @@ def setup_autocompletion():
                                     if filename.startswith(text):
                                         filepath = os.path.join(directory, filename)
                                         if os.path.isfile(filepath) and os.access(filepath, os.X_OK):
-                                            matches.add(filename)
+                                            matches.add(filename + " ") # Add space for executables
                             except Exception:
                                 pass
             else:
-                # --- NEW NESTED PATH COMPLETION ---
+                # --- FILE & DIRECTORY COMPLETION ---
                 try:
-                    # If there's a slash, split it into directory and prefix
                     if '/' in text:
                         dir_path = os.path.dirname(text)
                         prefix = os.path.basename(text)
@@ -119,22 +119,29 @@ def setup_autocompletion():
                         prefix = text
                         search_dir = "." # Default to current directory
 
-                    # Search the target directory
                     if os.path.isdir(search_dir):
                         for filename in os.listdir(search_dir):
                             if filename.startswith(prefix):
-                                # Reconstruct the full path to hand back to readline
-                                if dir_path:
-                                    matches.add(f"{dir_path}/{filename}")
+                                full_path = os.path.join(search_dir, filename)
+                                
+                                # Check if the match is a directory or a file
+                                if os.path.isdir(full_path):
+                                    suffix = "/"  # Directories get a slash
                                 else:
-                                    matches.add(filename)
+                                    suffix = " "  # Files get a space
+                                    
+                                if dir_path:
+                                    matches.add(f"{dir_path}/{filename}{suffix}")
+                                else:
+                                    matches.add(f"{filename}{suffix}")
                 except Exception:
                     pass
             
             completion_matches = sorted(list(matches))
 
         if state < len(completion_matches):
-            return completion_matches[state] + " "
+            # Return the exact string (the suffix is already baked in above!)
+            return completion_matches[state]
         else:
             return None
 
