@@ -17,6 +17,7 @@ HISTORY_APPEND_INDEX = 0
 BACKGROUND_JOBS = {}
 JOB_ORDER = []
 COMPLETIONS = {} # Dictionary to store registered complete scripts
+SHELL_VARIABLES = {}
 
 def get_marker(job_id):
     if len(JOB_ORDER) >= 1 and JOB_ORDER[-1] == job_id:
@@ -153,12 +154,26 @@ def run_complete(args):
     return ""
 
 def run_declare(args):
+    if not args:
+        return ""
+
     # Check for the -p (print) flag
-    if len(args) >= 2 and args[0] == "-p":
+    if args[0] == "-p" and len(args) >= 2:
         var_name = args[1]
-        # For now, we assume no variables exist
-        return f"declare: {var_name}: not found\n"
-        
+        if var_name in SHELL_VARIABLES:
+            # Format exactly as bash does: declare -- foo="bar"
+            return f'declare -- {var_name}="{SHELL_VARIABLES[var_name]}"\n'
+        else:
+            return f"declare: {var_name}: not found\n"
+            
+    # Check for variable assignments (e.g., foo=bar)
+    for arg in args:
+        if "=" in arg:
+            # .split("=", 1) ensures we only split on the FIRST equals sign
+            # just in case the value itself contains an equals sign!
+            var_name, var_value = arg.split("=", 1)
+            SHELL_VARIABLES[var_name] = var_value
+            
     return ""
 
 def setup_autocompletion():
