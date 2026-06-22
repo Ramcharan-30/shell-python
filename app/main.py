@@ -155,7 +155,7 @@ def setup_autocompletion():
     if readline is None:
         return
 
-    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history", "jobs", "complete"]
+    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history", "jobs", "complete","declare"]
     completion_matches = []
 
     def completer(text, state):
@@ -312,7 +312,7 @@ def type_command(args):
         print("type: usage: type name")
         return
 
-    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history", "jobs", "complete"]
+    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history", "jobs", "complete","declare"]
     if args in builtin_commands:
         print(f"{args} is a shell builtin")
     elif path := shutil.which(args):
@@ -357,7 +357,7 @@ def save_history_on_exit():
             pass 
 
 def multipipelines(commands):
-    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history", "jobs", "complete"]
+    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history", "jobs", "complete","declare"]
     
     chunks = []
     temp = []
@@ -549,6 +549,9 @@ def main():
                 output = run_complete(commands[1:])
                 if output:
                     print(output, end="")
+            elif commands[0] == "declare":
+                for cmd_name, script_path in COMPLETIONS.items():
+                    print(f"complete -C '{script_path}' {cmd_name}")
             elif path := shutil.which(commands[0]):
                 if redirect_stream == "stdout":
                     p = subprocess.Popen(commands, stdout=output_file_handle) 
