@@ -158,21 +158,28 @@ def setup_autocompletion():
             line_buffer = readline.get_line_buffer()
             begidx = readline.get_begidx()
             
-            # Figure out if we are typing the main command OR arguments
-            is_typing_args = False
-            if line_buffer[:begidx].strip() != "" and ' ' in line_buffer[:begidx].lstrip():
+            # Extract all the words typed before the current cursor position
+            words_before = line_buffer[:begidx].strip().split()
+            
+            # If there is at least one word, we are typing arguments (or a second word)
+            if len(words_before) > 0:
                 is_typing_args = True
-                
-            cmd_name = ""
-            if is_typing_args:
-                cmd_name = line_buffer.lstrip().split()[0]
+                cmd_name = words_before[0]
+                prev_word = words_before[-1]
+            else:
+                is_typing_args = False
+                cmd_name = ""
+                prev_word = ""
                 
             # --- 1. PROGRAMMABLE COMPLETION ---
             if is_typing_args and cmd_name in COMPLETIONS:
                 try:
                     script_path = COMPLETIONS[cmd_name]
-                    # Run the registered script
-                    result = subprocess.run([script_path], capture_output=True, text=True)
+                    # NEW: Pass the required context arguments to the script!
+                    result = subprocess.run(
+                        [script_path, cmd_name, text, prev_word], 
+                        capture_output=True, text=True
+                    )
                     # Use its output as the completion candidates
                     for line in result.stdout.splitlines():
                         line = line.strip()
