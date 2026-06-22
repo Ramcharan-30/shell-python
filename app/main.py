@@ -135,7 +135,13 @@ def run_history(args):
         return ""
 
     return get_history_output(args[0])
-
+def run_complete(args):
+    # For this stage, we only care about the '-p' flag followed by a command name
+    if len(args) >= 2 and args[0] == "-p":
+        cmd_name = args[1]
+        return f"complete: {cmd_name}: no completion specification\n"
+    
+    return ""
 def setup_autocompletion():
     if readline is None:
         return
@@ -337,7 +343,7 @@ def multipipelines(commands):
             elif cmd[0] == "jobs":
                 output_str = reap_and_format_jobs(display_done=False) # UPDATED
             elif cmd[0] == "complete":
-                output_str = ""
+                output_str = run_complete(cmd[1:])
             elif cmd[0] == "type":
                 arg = cmd[1] if len(cmd) > 1 else ""
                 if not arg:
@@ -490,7 +496,9 @@ def main():
                 if output:
                     print(output, end="")
             elif commands[0] == "complete":
-                pass
+                output = run_complete(commands[1:])       # UPDATED
+                if output:                                # UPDATED
+                    print(output, end="")
             elif path := shutil.which(commands[0]):
                 if redirect_stream == "stdout":
                     p = subprocess.Popen(commands, stdout=output_file_handle) 
