@@ -151,6 +151,16 @@ def run_complete(args):
         return ""
         
     return ""
+
+def run_declare(args):
+    # Check for the -p (print) flag
+    if len(args) >= 2 and args[0] == "-p":
+        var_name = args[1]
+        # For now, we assume no variables exist
+        return f"declare: {var_name}: not found\n"
+        
+    return ""
+
 def setup_autocompletion():
     if readline is None:
         return
@@ -397,6 +407,8 @@ def multipipelines(commands):
                 output_str = reap_and_format_jobs(display_done=False)
             elif cmd[0] == "complete":
                 output_str = run_complete(cmd[1:])
+            elif cmd[0] == "declare":                     # UPDATED
+                output_str = run_declare(cmd[1:])
             elif cmd[0] == "type":
                 arg = cmd[1] if len(cmd) > 1 else ""
                 if not arg:
@@ -550,8 +562,9 @@ def main():
                 if output:
                     print(output, end="")
             elif commands[0] == "declare":
-                for cmd_name, script_path in COMPLETIONS.items():
-                    print(f"complete -C '{script_path}' {cmd_name}")
+                output = run_declare(commands[1:])        # UPDATED
+                if output:                                # UPDATED
+                    print(output, end="")
             elif path := shutil.which(commands[0]):
                 if redirect_stream == "stdout":
                     p = subprocess.Popen(commands, stdout=output_file_handle) 
