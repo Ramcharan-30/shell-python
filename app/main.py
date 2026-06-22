@@ -16,6 +16,7 @@ HISTORY_APPEND_INDEX = 0
 # Global state for background jobs
 BACKGROUND_JOBS = {}
 JOB_ORDER = []
+COMPLETIONS = {}
 
 def get_marker(job_id):
     # The most recent job gets '+', the second most recent gets '-', everything else gets a space
@@ -136,12 +137,26 @@ def run_history(args):
 
     return get_history_output(args[0])
 def run_complete(args):
-    # For this stage, we only care about the '-p' flag followed by a command name
+    # Check for the -p (print) flag
     if len(args) >= 2 and args[0] == "-p":
         cmd_name = args[1]
-        return f"complete: {cmd_name}: no completion specification\n"
-    
+        if cmd_name in COMPLETIONS:
+            # Reconstruct the normalized string with single quotes
+            return f"complete -C '{COMPLETIONS[cmd_name]}' {cmd_name}\n"
+        else:
+            # Fallback error if nothing is registered
+            return f"complete: {cmd_name}: no completion specification\n"
+            
+    # Check for the -C (register) flag
+    elif len(args) >= 3 and args[0] == "-C":
+        script_path = args[1]
+        cmd_name = args[2]
+        # Save the path to our dictionary using the command name as the key
+        COMPLETIONS[cmd_name] = script_path
+        return "" # No output when registering
+        
     return ""
+
 def setup_autocompletion():
     if readline is None:
         return
