@@ -328,22 +328,36 @@ def parse_args(command_string):
             else:
                 current_token.append(char)
                 
-        # --- NEW: Parameter Expansion Logic ---
+        # --- UPDATED: Brace Expansion Logic ---
         elif char == '$' and quote_char != "'":
             var_name = []
             i += 1
-            # Read characters as long as they are valid identifier chars (A-Z, 0-9, _)
-            while i < len(command_string) and (command_string[i].isalnum() or command_string[i] == '_'):
-                var_name.append(command_string[i])
-                i += 1
-                
+            
+            is_braced = False
+            # Check if the next character is a curly brace
+            if i < len(command_string) and command_string[i] == '{':
+                is_braced = True
+                i += 1 # Skip the '{'
+                # Read until we hit the closing brace
+                while i < len(command_string) and command_string[i] != '}':
+                    var_name.append(command_string[i])
+                    i += 1
+                if i < len(command_string) and command_string[i] == '}':
+                    i += 1 # Skip the '}'
+            else:
+                # Original logic: read until non-alphanumeric
+                while i < len(command_string) and (command_string[i].isalnum() or command_string[i] == '_'):
+                    var_name.append(command_string[i])
+                    i += 1
+                    
             var_str = "".join(var_name)
-            if var_str:
-                # Look up the variable, default to empty string if it doesn't exist
+            
+            # If we found a variable name OR it was explicitly braced (like ${})
+            if var_str or is_braced:
                 val = SHELL_VARIABLES.get(var_str, "")
                 current_token.extend(list(val))
             else:
-                # If it was just an isolated '$' with no name after it
+                # It was just a lone '$' symbol
                 current_token.append('$')
             
             # Step back one index since the main loop will increment it again
