@@ -303,17 +303,23 @@ def parse_args(command_string):
     current_token = []
     quote_char = None
     escaped = False
-
-    for char in command_string:
+    
+    i = 0
+    while i < len(command_string):
+        char = command_string[i]
+        
         if escaped:
             if quote_char == '"' and char not in ('"', '\\', '$', '\n'):
                 current_token.append('\\') 
             current_token.append(char)
             escaped = False
+            
         elif char == "\\" and quote_char is None:
             escaped = True
+            
         elif char == "\\" and quote_char == '"':
             escaped = True
+            
         elif char in ('"', "'"):
             if quote_char is None:
                 quote_char = char
@@ -321,12 +327,38 @@ def parse_args(command_string):
                 quote_char = None
             else:
                 current_token.append(char)
+                
+        # --- NEW: Parameter Expansion Logic ---
+        elif char == '$' and quote_char != "'":
+            var_name = []
+            i += 1
+            # Read characters as long as they are valid identifier chars (A-Z, 0-9, _)
+            while i < len(command_string) and (command_string[i].isalnum() or command_string[i] == '_'):
+                var_name.append(command_string[i])
+                i += 1
+                
+            var_str = "".join(var_name)
+            if var_str:
+                # Look up the variable, default to empty string if it doesn't exist
+                val = SHELL_VARIABLES.get(var_str, "")
+                current_token.extend(list(val))
+            else:
+                # If it was just an isolated '$' with no name after it
+                current_token.append('$')
+            
+            # Step back one index since the main loop will increment it again
+            i -= 1
+        # --------------------------------------
+        
         elif char == " " and quote_char is None:
             if current_token:
                 args.append("".join(current_token))
                 current_token = []
+                
         else:
             current_token.append(char)
+            
+        i += 1
     
     if current_token:
         args.append("".join(current_token))
