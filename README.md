@@ -1,4 +1,3 @@
-[![progress-banner](https://backend.codecrafters.io/progress/shell/264d4502-ba88-44e4-85a8-1935f4707252)](https://app.codecrafters.io/users/Ramcharan-30?r=2qF)
 
 # Custom Python Shell
 
