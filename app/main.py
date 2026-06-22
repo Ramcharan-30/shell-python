@@ -253,7 +253,7 @@ def type_command(args):
         print("type: usage: type name")
         return
 
-    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history", "jobs"]
+    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history", "jobs","complete"]
     if args in builtin_commands:
         print(f"{args} is a shell builtin")
     elif path := shutil.which(args):
@@ -298,7 +298,7 @@ def save_history_on_exit():
             pass 
 
 def multipipelines(commands):
-    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history", "jobs"]
+    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history", "jobs","complete"]
     
     chunks = []
     temp = []
@@ -336,6 +336,8 @@ def multipipelines(commands):
                 output_str = run_history(cmd[1:])
             elif cmd[0] == "jobs":
                 output_str = reap_and_format_jobs(display_done=False) # UPDATED
+            elif cmd[0] == "complete":
+                output_str = ""
             elif cmd[0] == "type":
                 arg = cmd[1] if len(cmd) > 1 else ""
                 if not arg:
@@ -487,6 +489,8 @@ def main():
                 output = reap_and_format_jobs(display_done=False) # UPDATED
                 if output:
                     print(output, end="")
+            elif commands[0] == "complete":
+                pass
             elif path := shutil.which(commands[0]):
                 if redirect_stream == "stdout":
                     p = subprocess.Popen(commands, stdout=output_file_handle) 
