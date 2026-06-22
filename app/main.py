@@ -154,14 +154,14 @@ def run_complete(args):
     return ""
 
 def run_declare(args):
+    output = ""
     if not args:
-        return ""
+        return output
 
     # Check for the -p (print) flag
     if args[0] == "-p" and len(args) >= 2:
         var_name = args[1]
         if var_name in SHELL_VARIABLES:
-            # Format exactly as bash does: declare -- foo="bar"
             return f'declare -- {var_name}="{SHELL_VARIABLES[var_name]}"\n'
         else:
             return f"declare: {var_name}: not found\n"
@@ -169,12 +169,16 @@ def run_declare(args):
     # Check for variable assignments (e.g., foo=bar)
     for arg in args:
         if "=" in arg:
-            # .split("=", 1) ensures we only split on the FIRST equals sign
-            # just in case the value itself contains an equals sign!
             var_name, var_value = arg.split("=", 1)
-            SHELL_VARIABLES[var_name] = var_value
             
-    return ""
+            # NEW: Validate the identifier before saving
+            if var_name.isidentifier():
+                SHELL_VARIABLES[var_name] = var_value
+            else:
+                # Notice the backtick (`) and single quote (') to match bash exactly!
+                output += f"declare: `{arg}': not a valid identifier\n"
+                
+    return output
 
 def setup_autocompletion():
     if readline is None:
