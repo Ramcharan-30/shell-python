@@ -128,6 +128,7 @@ def run_history(args):
     return get_history_output(args[0])
 
 def run_complete(args):
+    # Check for the -p (print) flag
     if len(args) >= 2 and args[0] == "-p":
         cmd_name = args[1]
         if cmd_name in COMPLETIONS:
@@ -135,14 +136,21 @@ def run_complete(args):
         else:
             return f"complete: {cmd_name}: no completion specification\n"
             
+    # Check for the -C (register) flag
     elif len(args) >= 3 and args[0] == "-C":
         script_path = args[1]
         cmd_name = args[2]
         COMPLETIONS[cmd_name] = script_path
         return ""
         
+    # --- NEW: Check for the -r (remove) flag ---
+    elif len(args) >= 2 and args[0] == "-r":
+        cmd_name = args[1]
+        # .pop() safely removes the key if it exists, and does nothing if it doesn't
+        COMPLETIONS.pop(cmd_name, None) 
+        return ""
+        
     return ""
-
 def setup_autocompletion():
     if readline is None:
         return
