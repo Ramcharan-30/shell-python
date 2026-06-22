@@ -2,7 +2,7 @@ import sys
 import shutil
 import subprocess
 import os
-import time  # NEW: Required to yield to the OS for the race condition
+import time
 
 try:
     import readline
@@ -13,13 +13,12 @@ except ImportError:
 HISTORY_LIST = []
 HISTORY_APPEND_INDEX = 0
 
-# Global state for background jobs
+# Global state for background jobs & completions
 BACKGROUND_JOBS = {}
 JOB_ORDER = []
-COMPLETIONS = {}
+COMPLETIONS = {} # Dictionary to store registered complete scripts
 
 def get_marker(job_id):
-    # The most recent job gets '+', the second most recent gets '-', everything else gets a space
     if len(JOB_ORDER) >= 1 and JOB_ORDER[-1] == job_id:
         return "+"
     elif len(JOB_ORDER) >= 2 and JOB_ORDER[-2] == job_id:
@@ -28,34 +27,29 @@ def get_marker(job_id):
         return " "
 
 def reap_and_format_jobs(display_done=True):
-    # Give the OS a tiny fraction of a second to report closed processes
     if BACKGROUND_JOBS:
         time.sleep(0.05)
         
     output = ""
     done_jobs = []
 
-    # 1. First, identify which jobs have finished
     for job_id in sorted(BACKGROUND_JOBS.keys()):
         job = BACKGROUND_JOBS[job_id]
         if job['process'].poll() is not None:
             job['status'] = 'Done'
             done_jobs.append(job_id)
 
-    # 2. Format the output string for the 'jobs' command
     for job_id in sorted(BACKGROUND_JOBS.keys()):
         job = BACKGROUND_JOBS[job_id]
         marker = get_marker(job_id)
         status_padded = job['status'].ljust(24)
         cmd_string = job['cmd']
         
-        # The 'Done' output explicitly removes the trailing ' &' if it exists
         if job['status'] == 'Done' and cmd_string.endswith(" &"):
             cmd_string = cmd_string[:-2]
 
         output += f"[{job_id}]{marker}  {status_padded}{cmd_string}\n"
 
-    # 3. If enabled (like before a prompt), print 'Done' immediately
     if display_done:
         for job_id in done_jobs:
             job = BACKGROUND_JOBS[job_id]
@@ -64,10 +58,8 @@ def reap_and_format_jobs(display_done=True):
             cmd_string = job['cmd']
             if cmd_string.endswith(" &"):
                 cmd_string = cmd_string[:-2]
-            # flush=True ensures it prints immediately before the prompt
             print(f"[{job_id}]{marker}  {status_padded}{cmd_string}", flush=True)
 
-    # 4. Clean up the dictionaries so the IDs can be recycled later
     for job_id in done_jobs:
         del BACKGROUND_JOBS[job_id]
         JOB_ORDER.remove(job_id)
@@ -84,11 +76,9 @@ def get_history_output(num=None):
             num = int(num)
             if num < 0:
                 raise ValueError
-            
             start_index = max(0, len(HISTORY_LIST) - num)
             history_to_show = HISTORY_LIST[start_index:]
             start_num = start_index + 1
-            
         except ValueError:
             return "history: usage: history [n]\n"
 
@@ -136,24 +126,20 @@ def run_history(args):
         return ""
 
     return get_history_output(args[0])
+
 def run_complete(args):
-    # Check for the -p (print) flag
     if len(args) >= 2 and args[0] == "-p":
         cmd_name = args[1]
         if cmd_name in COMPLETIONS:
-            # Reconstruct the normalized string with single quotes
             return f"complete -C '{COMPLETIONS[cmd_name]}' {cmd_name}\n"
         else:
-            # Fallback error if nothing is registered
             return f"complete: {cmd_name}: no completion specification\n"
             
-    # Check for the -C (register) flag
     elif len(args) >= 3 and args[0] == "-C":
         script_path = args[1]
         cmd_name = args[2]
-        # Save the path to our dictionary using the command name as the key
         COMPLETIONS[cmd_name] = script_path
-        return "" # No output when registering
+        return ""
         
     return ""
 
@@ -161,7 +147,7 @@ def setup_autocompletion():
     if readline is None:
         return
 
-    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history", "jobs"]
+    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history", "jobs", "complete"]
     completion_matches = []
 
     def completer(text, state):
@@ -170,8 +156,33 @@ def setup_autocompletion():
         if state == 0:
             matches = set()
             line_buffer = readline.get_line_buffer()
+            begidx = readline.get_begidx()
             
-            if readline.get_begidx() == 0 or line_buffer[:readline.get_begidx()].strip() == "":
+            # Figure out if we are typing the main command OR arguments
+            is_typing_args = False
+            if line_buffer[:begidx].strip() != "" and ' ' in line_buffer[:begidx].lstrip():
+                is_typing_args = True
+                
+            cmd_name = ""
+            if is_typing_args:
+                cmd_name = line_buffer.lstrip().split()[0]
+                
+            # --- 1. PROGRAMMABLE COMPLETION ---
+            if is_typing_args and cmd_name in COMPLETIONS:
+                try:
+                    script_path = COMPLETIONS[cmd_name]
+                    # Run the registered script
+                    result = subprocess.run([script_path], capture_output=True, text=True)
+                    # Use its output as the completion candidates
+                    for line in result.stdout.splitlines():
+                        line = line.strip()
+                        if line and line.startswith(text):
+                            matches.add(line + " ")
+                except Exception:
+                    pass
+                    
+            # --- 2. COMMAND COMPLETION ---
+            elif not is_typing_args:
                 for cmd in builtin_commands:
                     if cmd.startswith(text):
                         matches.add(cmd + " ")
@@ -188,6 +199,8 @@ def setup_autocompletion():
                                             matches.add(filename + " ")
                             except Exception:
                                 pass
+                                
+            # --- 3. DEFAULT FILE/DIRECTORY COMPLETION ---
             else:
                 try:
                     if '/' in text:
@@ -274,7 +287,7 @@ def type_command(args):
         print("type: usage: type name")
         return
 
-    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history", "jobs","complete"]
+    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history", "jobs", "complete"]
     if args in builtin_commands:
         print(f"{args} is a shell builtin")
     elif path := shutil.which(args):
@@ -319,7 +332,7 @@ def save_history_on_exit():
             pass 
 
 def multipipelines(commands):
-    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history", "jobs","complete"]
+    builtin_commands = ["echo", "exit", "type", "pwd", "cd", "history", "jobs", "complete"]
     
     chunks = []
     temp = []
@@ -356,7 +369,7 @@ def multipipelines(commands):
             elif cmd[0] == "history":
                 output_str = run_history(cmd[1:])
             elif cmd[0] == "jobs":
-                output_str = reap_and_format_jobs(display_done=False) # UPDATED
+                output_str = reap_and_format_jobs(display_done=False)
             elif cmd[0] == "complete":
                 output_str = run_complete(cmd[1:])
             elif cmd[0] == "type":
@@ -413,7 +426,6 @@ def main():
     setup_autocompletion()
 
     while(1):         
-        # NEW: Automatically check for and print finished background jobs before the prompt!
         reap_and_format_jobs(display_done=True)
 
         try:
@@ -429,16 +441,14 @@ def main():
         if not commands:
             continue
 
-        # Save the literal string they typed BEFORE we chop off the "&"
         original_cmd_str = " ".join(commands)
         
-        # Check if the command should run in the background
         is_background = False
         if commands[-1] == "&":
             is_background = True
-            commands.pop() # Remove the token so the OS doesn't see it
+            commands.pop()
             
-        if not commands: # Just in case they typed only "&"
+        if not commands: 
             continue
 
         redirect_file = None
@@ -507,12 +517,12 @@ def main():
                 if output:
                     print(output, end="")
             elif commands[0] == "jobs":
-                output = reap_and_format_jobs(display_done=False) # UPDATED
+                output = reap_and_format_jobs(display_done=False)
                 if output:
                     print(output, end="")
             elif commands[0] == "complete":
-                output = run_complete(commands[1:])       # UPDATED
-                if output:                                # UPDATED
+                output = run_complete(commands[1:])
+                if output:
                     print(output, end="")
             elif path := shutil.which(commands[0]):
                 if redirect_stream == "stdout":
@@ -523,7 +533,6 @@ def main():
                     p = subprocess.Popen(commands)
                     
                 if is_background:
-                    # RECYCLE LOGIC: Find the lowest available number starting from 1
                     job_id = 1
                     while job_id in BACKGROUND_JOBS:
                         job_id += 1
