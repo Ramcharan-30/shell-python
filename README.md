@@ -1,34 +1,38 @@
 [![progress-banner](https://backend.codecrafters.io/progress/shell/264d4502-ba88-44e4-85a8-1935f4707252)](https://app.codecrafters.io/users/Ramcharan-30?r=2qF)
 
-This is a starting point for Python solutions to the
-["Build Your Own Shell" Challenge](https://app.codecrafters.io/courses/shell/overview).
+# Custom Python Shell
 
-In this challenge, you'll build your own POSIX compliant shell that's capable of
-interpreting shell commands, running external programs and builtin commands like
-cd, pwd, echo and more. Along the way, you'll learn about shell command parsing,
-REPLs, builtin commands, and more.
+A lightweight, fully-functional Unix-like shell implemented entirely in Python. This project was built as a comprehensive exercise in understanding operating system interactions, process management, and command-line parsing.
 
-**Note**: If you're viewing this repo on GitHub, head over to
-[codecrafters.io](https://codecrafters.io) to try the challenge.
+## 🚀 Features
 
-# Passing the first stage
+* **Command Execution:** Run standard external commands and executables found in your system's `$PATH`.
+* **Built-in Commands:** * `cd`, `pwd`: Navigate the file system.
+  * `echo`, `type`: Print text and identify command types/locations.
+  * `exit`: Safely terminate the shell.
+* **I/O Redirection:** Route standard output and standard error to files using `>`, `>>`, `1>`, `1>>`, `2>`, and `2>>`.
+* **Pipelining:** Chain multiple commands together using `|` (e.g., `ls -l | grep ".py" | wc -l`).
+* **Background Jobs:** * Run processes in the background using `&`.
+  * Track active background processes using the `jobs` builtin.
+  * Automatic, silent zombie process reaping before every new prompt.
+* **Advanced Tab Autocompletion:**
+  * Auto-completes builtins, executables in `$PATH`, and local files/directories.
+  * **Programmable Completion:** Use the `complete -C <script> <cmd>` builtin to register custom external scripts for context-aware, dynamic autocompletion.
+* **Command History:** * Tracks session history and persists it across sessions via the `$HISTFILE` environment variable.
+  * Manage history dynamically using `history -r`, `-w`, and `-a`.
+* **Variables & Parameter Expansion:** * Declare custom shell variables using `declare foo=bar`.
+  * Evaluate variables inline using standard `$VAR` or braced `${VAR}` expansion formats.
 
-The entry point for your `shell` implementation is in `app/main.py`. Study and
-uncomment the relevant code, and push your changes to pass the first stage:
+## 🛠️ Prerequisites
 
-```sh
-git commit -am "pass 1st stage" # any msg
-git push origin master
-```
+* **Python 3.8+**
+* `readline` library (Included in the Python standard library on Linux/macOS. Windows users may need to install `pyreadline3`).
 
-Time to move on to the next stage!
+## 💻 Usage
 
-# Stage 2 & beyond
+Clone the repository and run the main Python script to start the interactive shell:
 
-Note: This section is for stages 2 and beyond.
-
-1. Ensure you have `uv` installed locally
-1. Run `./your_program.sh` to run your program, which is implemented in
-   `app/main.py`.
-1. Commit your changes and run `git push origin master` to submit your solution
-   to CodeCrafters. Test output will be streamed to your terminal.
+```bash
+git clone [https://github.com/yourusername/your-shell-repo.git](https://github.com/yourusername/your-shell-repo.git)
+cd your-shell-repo
+python3 shell.py
