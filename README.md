@@ -29,29 +29,6 @@ Requires a Linux/UNIX environment (or WSL on Windows) and a modern C++ compiler 
 ### Compilation
 Compile the shell with the `pthread` flag to enable the background task scheduler:
 
-###Usage Examples:
-# Start the shell
-./myshell
 
-# 1. Run standard commands
-$ ls -la
-
-# 2. Chain logic using OS exit codes
-$ fakecommand || echo "Fallback worked!" && echo "Success!"
-
-# 3. Route Inter-Process Communication
-$ cat main.cpp | grep "include" | wc -l
-
-# 4. Offload heavy tasks to the Thread Pool
-$ sleep 5 &
-[Job 1] Sent to background.
-
-# Profiler output automatically prints upon thread completion:
-=== [Background Job Finished] ===
-Wall-Clock : 5.00251 s
-User CPU   : 0 s
-System CPU : 0.0022 s
-Peak RAM   : 7712 KB
-=================================
 ```bash
 g++ -std=c++17 shell.cpp -o myshell -pthread
