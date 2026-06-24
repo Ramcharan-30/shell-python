@@ -1,0 +1,7 @@
+total 136
+drwxrwxrwx 1 root root   4096 Jun 24 15:07 .
+drwxrwxrwx 1 root root   4096 Jun 23 15:19 ..
+-rwxrwxrwx 1 root root  23151 Jun 23 15:19 main.py
+-rwxrwxrwx 1 root root 106280 Jun 24 15:07 myshell
+-rwxrwxrwx 1 root root   7078 Jun 24 15:07 shell.cpp
+-rwxrwxrwx 1 root root      0 Jun 24 15:07 test.txt
